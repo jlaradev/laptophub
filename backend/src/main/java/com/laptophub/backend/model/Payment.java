@@ -1,5 +1,6 @@
 package com.laptophub.backend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,6 +21,7 @@ public class Payment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
+    @JsonIgnore
     @OneToOne
     @JoinColumn(name = "order_id", nullable = false)
     private Order order;

@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Servicio para gestionar el carrito de compras.
@@ -33,7 +34,7 @@ public class CartService {
     
     @Transactional
     @SuppressWarnings("null")
-    public Cart getOrCreateCart(Long userId) {
+    public Cart getOrCreateCart(UUID userId) {
         User user = userService.findById(userId);
         Optional<Cart> existingCart = cartRepository.findByUser(user);
         
@@ -49,7 +50,7 @@ public class CartService {
     
     @Transactional
     @SuppressWarnings("null")
-    public Cart addToCart(Long userId, Long productId, Integer cantidad) {
+    public Cart addToCart(UUID userId, Long productId, Integer cantidad) {
         if (cantidad <= 0) {
             throw new RuntimeException("La cantidad debe ser mayor a 0");
         }
@@ -101,7 +102,7 @@ public class CartService {
     
     @Transactional
     @SuppressWarnings("null")
-    public void clearCart(Long userId) {
+    public void clearCart(UUID userId) {
         Cart cart = getOrCreateCart(userId);
         cartItemRepository.deleteAll(cart.getItems());
     }
@@ -119,7 +120,7 @@ public class CartService {
     }
     
     @Transactional
-    public Cart getCartByUserId(Long userId) {
+    public Cart getCartByUserId(UUID userId) {
         return getOrCreateCart(userId);
     }
 }

@@ -1,0 +1,315 @@
+package com.laptophub.backend;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.laptophub.backend.model.Order;
+import com.laptophub.backend.model.Product;
+import com.laptophub.backend.model.User;
+import com.laptophub.backend.repository.CartItemRepository;
+import com.laptophub.backend.repository.CartRepository;
+import com.laptophub.backend.repository.OrderItemRepository;
+import com.laptophub.backend.repository.OrderRepository;
+import com.laptophub.backend.repository.PaymentRepository;
+import com.laptophub.backend.repository.ProductRepository;
+import com.laptophub.backend.repository.UserRepository;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.BeforeAll;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+
+import java.math.BigDecimal;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
+
+/**
+ * Tests de endpoints CRUD para Order
+ * Ejecuta las pruebas en orden específico para mantener consistencia
+ */
+@SpringBootTest
+@AutoConfigureMockMvc
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+public class OrderControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @Autowired
+    private OrderRepository orderRepository;
+
+    @Autowired
+    private OrderItemRepository orderItemRepository;
+
+    @Autowired
+    private PaymentRepository paymentRepository;
+
+    @Autowired
+    private CartRepository cartRepository;
+
+    @Autowired
+    private CartItemRepository cartItemRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private ProductRepository productRepository;
+
+    private static String userId;
+    private static String productId;
+    private static String orderId;
+    
+    private static final String UNIQUE_EMAIL = "order.test." + System.currentTimeMillis() + "@laptophub.com";
+
+    /**
+     * Limpia la base de datos una sola vez antes de todos los tests
+     */
+    @BeforeAll
+    public static void setUpDatabase() {
+        // La limpieza ocurre una sola vez al inicio
+    }
+
+    /**
+     * TEST 1: Configuración - Crear usuario y producto de prueba
+     */
+    @Test
+    @org.junit.jupiter.api.Order(1)
+    @SuppressWarnings("null")
+    public void test1_SetupUserAndProduct() throws Exception {
+        // Limpiar BD solo antes del primer test
+        orderItemRepository.deleteAll();
+        paymentRepository.deleteAll();
+        orderRepository.deleteAll();
+        cartItemRepository.deleteAll();
+        cartRepository.deleteAll();
+        
+        System.out.println("\n=== TEST 1: Configuración - Crear usuario y producto ===");
+        
+        User testUser = User.builder()
+                .email(UNIQUE_EMAIL)
+                .password("password123")
+                .nombre("Order")
+                .apellido("Tester")
+                .telefono("555-0003")
+                .direccion("Order Test Address")
+                .build();
+        
+        User savedUser = userRepository.save(testUser);
+        userId = savedUser.getId().toString();
+        
+        Product testProduct = Product.builder()
+                .nombre("Laptop Acer Nitro 5")
+                .descripcion("Laptop gaming con buena relacion precio-rendimiento")
+                .precio(new BigDecimal("1099.99"))
+                .stock(40)
+                .marca("Acer")
+                .procesador("Intel Core i7-11800H")
+                .ram(16)
+                .almacenamiento(512)
+                .pantalla("15.6 pulgadas FHD 144Hz")
+                .gpu("NVIDIA RTX 3060")
+                .peso(new BigDecimal("2.4"))
+                .imagenUrl("https://example.com/acer-nitro-5.jpg")
+                .build();
+        
+        Product savedProduct = productRepository.save(testProduct);
+        productId = savedProduct.getId().toString();
+        
+        System.out.println("✅ TEST 1 PASÓ: Usuario creado con ID: " + userId);
+        System.out.println("✅ Producto creado con ID: " + productId + "\n");
+    }
+
+    /**
+     * TEST 2: Crear orden desde carrito (POST /api/orders/user/{userId})
+     */
+    @Test
+    @org.junit.jupiter.api.Order(2)
+    public void test2_CreateOrderFromCart() throws Exception {
+        System.out.println("\n=== TEST 2: Crear orden desde carrito (POST /api/orders/user/{userId}) ===");
+        
+        mockMvc.perform(post("/api/cart/user/" + userId + "/items")
+                        .param("productId", productId)
+                        .param("cantidad", "2"))
+                .andExpect(status().isOk());
+        
+        MvcResult result = mockMvc.perform(post("/api/orders/user/" + userId)
+                        .param("direccionEnvio", "Calle Order 123"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").exists())
+                .andExpect(jsonPath("$.estado").value("PENDIENTE_PAGO"))
+                .andReturn();
+
+        String response = result.getResponse().getContentAsString();
+        Order createdOrder = objectMapper.readValue(response, Order.class);
+        orderId = createdOrder.getId().toString();
+        
+        System.out.println("✅ TEST 2 PASÓ: Orden creada con ID: " + orderId + "\n");
+    }
+
+    /**
+     * TEST 3: Buscar orden por ID (GET /api/orders/{orderId})
+     */
+    @Test
+    @org.junit.jupiter.api.Order(3)
+    public void test3_FindOrderById() throws Exception {
+        System.out.println("\n=== TEST 3: Buscar orden por ID (GET /api/orders/{orderId}) ===");
+        
+        mockMvc.perform(get("/api/orders/" + orderId))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(orderId))
+                .andExpect(jsonPath("$.estado").value("PENDIENTE_PAGO"));
+        
+        System.out.println("✅ TEST 3 PASÓ: Orden encontrada por ID\n");
+    }
+
+    /**
+     * TEST 4: Buscar órdenes por usuario (GET /api/orders/user/{userId})
+     */
+    @Test
+    @org.junit.jupiter.api.Order(4)
+    public void test4_FindOrdersByUser() throws Exception {
+        System.out.println("\n=== TEST 4: Buscar órdenes por usuario (GET /api/orders/user/{userId}) ===");
+        
+        mockMvc.perform(get("/api/orders/user/" + userId))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].id").exists());
+        
+        System.out.println("✅ TEST 4 PASÓ: Órdenes encontradas por usuario\n");
+    }
+
+    /**
+     * TEST 5: Buscar órdenes por estado (GET /api/orders/status/{estado})
+     */
+    @Test
+    @org.junit.jupiter.api.Order(5)
+    public void test5_FindOrdersByStatus() throws Exception {
+        System.out.println("\n=== TEST 5: Buscar órdenes por estado (GET /api/orders/status/{estado}) ===");
+        
+        mockMvc.perform(get("/api/orders/status/PENDIENTE_PAGO"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].estado").value("PENDIENTE_PAGO"));
+        
+        System.out.println("✅ TEST 5 PASÓ: Órdenes encontradas por estado\n");
+    }
+
+    /**
+     * TEST 6: Actualizar estado de la orden (PUT /api/orders/{orderId}/status/{estado})
+     */
+    @Test
+    @org.junit.jupiter.api.Order(6)
+    public void test6_UpdateOrderStatus() throws Exception {
+        System.out.println("\n=== TEST 6: Actualizar estado de la orden (PUT /api/orders/{orderId}/status/{estado}) ===");
+        
+        mockMvc.perform(put("/api/orders/" + orderId + "/status/PROCESANDO"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(orderId))
+                .andExpect(jsonPath("$.estado").value("PROCESANDO"));
+        
+        System.out.println("✅ TEST 6 PASÓ: Estado actualizado correctamente\n");
+    }
+
+    /**
+     * TEST 7: Expirar órdenes pendientes (POST /api/orders/expire)
+     */
+    @Test
+    @org.junit.jupiter.api.Order(7)
+    public void test7_ExpirePendingOrders() throws Exception {
+        System.out.println("\n=== TEST 7: Expirar órdenes pendientes (POST /api/orders/expire) ===");
+        
+        mockMvc.perform(post("/api/orders/expire"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isNumber());
+        
+        System.out.println("✅ TEST 7 PASÓ: Expiración ejecutada\n");
+    }
+
+    /**
+     * TEST 8: Listar todas las órdenes (GET /api/orders)
+     */
+    @Test
+    @org.junit.jupiter.api.Order(8)
+    public void test8_FindAllOrders() throws Exception {
+        System.out.println("\n=== TEST 8: Listar todas las órdenes (GET /api/orders) ===");
+        
+        mockMvc.perform(get("/api/orders"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].id").exists());
+        
+        System.out.println("✅ TEST 8 PASÓ: Lista de órdenes obtenida\n");
+    }
+
+    /**
+     * TEST 9: Cancelar orden (POST /api/orders/{orderId}/cancel)
+     */
+    @Test
+    @org.junit.jupiter.api.Order(9)
+    public void test9_CancelOrder() throws Exception {
+        System.out.println("\n=== TEST 9: Cancelar orden (POST /api/orders/{orderId}/cancel) ===");
+        
+        mockMvc.perform(post("/api/cart/user/" + userId + "/items")
+                        .param("productId", productId)
+                        .param("cantidad", "1"))
+                .andExpect(status().isOk());
+        
+        MvcResult result = mockMvc.perform(post("/api/orders/user/" + userId)
+                        .param("direccionEnvio", "Calle Cancel 456"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String response = result.getResponse().getContentAsString();
+        Order cancelOrder = objectMapper.readValue(response, Order.class);
+        String cancelOrderId = cancelOrder.getId().toString();
+        
+        mockMvc.perform(post("/api/orders/" + cancelOrderId + "/cancel"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("CANCELADO"));
+        
+        System.out.println("✅ TEST 9 PASÓ: Orden cancelada correctamente\n");
+    }
+
+    /**
+     * TEST 10: Crear orden final para verificación manual
+     */
+    @Test
+    @org.junit.jupiter.api.Order(10)
+    public void test10_CreateFinalOrderForVerification() throws Exception {
+        System.out.println("\n=== TEST 10: Crear orden final para verificación manual ===");
+        
+        mockMvc.perform(post("/api/cart/user/" + userId + "/items")
+                        .param("productId", productId)
+                        .param("cantidad", "1"))
+                .andExpect(status().isOk());
+        
+        MvcResult result = mockMvc.perform(post("/api/orders/user/" + userId)
+                        .param("direccionEnvio", "Calle Final 789"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").exists())
+                .andReturn();
+
+        String response = result.getResponse().getContentAsString();
+        Order finalOrder = objectMapper.readValue(response, Order.class);
+        
+        System.out.println("✅ TEST 10 PASÓ: Orden final creada con ID: " + finalOrder.getId());
+        System.out.println("📋 Verifica en tu gestor de BD la orden del usuario: order.test@laptophub.com\n");
+    }
+}

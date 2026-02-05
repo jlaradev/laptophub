@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -28,7 +29,7 @@ public class ReviewService {
     
     @Transactional
     @SuppressWarnings("null")
-    public Review createReview(Long productId, Long userId, Integer rating, String comentario) {
+    public Review createReview(Long productId, UUID userId, Integer rating, String comentario) {
         validateRating(rating);
         
         User user = userService.findById(userId);
@@ -56,7 +57,7 @@ public class ReviewService {
     }
     
     @Transactional(readOnly = true)
-    public Review getUserReviewForProduct(Long productId, Long userId) {
+    public Review getUserReviewForProduct(Long productId, UUID userId) {
         User user = userService.findById(userId);
         Product product = productService.findById(productId);
         

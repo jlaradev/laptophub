@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -28,7 +29,7 @@ public class OrderService {
     
     @Transactional
     @SuppressWarnings("null")
-    public Order createOrderFromCart(Long userId, String direccionEnvio) {
+    public Order createOrderFromCart(UUID userId, String direccionEnvio) {
         User user = userService.findById(userId);
         Cart cart = cartService.getOrCreateCart(userId);
         
@@ -95,7 +96,7 @@ public class OrderService {
     }
     
     @Transactional(readOnly = true)
-    public List<Order> findByUserId(Long userId) {
+    public List<Order> findByUserId(UUID userId) {
         User user = userService.findById(userId);
         return orderRepository.findByUser(user);
     }

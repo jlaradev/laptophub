@@ -1,5 +1,6 @@
 package com.laptophub.backend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -46,9 +47,11 @@ public class Order {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
     
+    @JsonIgnore
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> orderItems;
     
+    @JsonIgnore
     @OneToOne(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private Payment payment;
     

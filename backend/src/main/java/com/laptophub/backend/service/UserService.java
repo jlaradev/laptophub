@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -25,7 +26,7 @@ public class UserService {
     
     @Transactional(readOnly = true)
     @SuppressWarnings("null")
-    public User findById(Long id) {
+    public User findById(UUID id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado con id: " + id));
     }
@@ -43,7 +44,7 @@ public class UserService {
     
     @Transactional
     @SuppressWarnings("null")
-    public User updateUser(Long id, User updatedUser) {
+    public User updateUser(UUID id, User updatedUser) {
         User existingUser = findById(id);
         if (updatedUser.getNombre() != null) existingUser.setNombre(updatedUser.getNombre());
         if (updatedUser.getApellido() != null) existingUser.setApellido(updatedUser.getApellido());

@@ -1,5 +1,6 @@
 package com.laptophub.backend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -18,6 +19,7 @@ public class CartItem {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "cart_id", nullable = false)
     private Cart cart;

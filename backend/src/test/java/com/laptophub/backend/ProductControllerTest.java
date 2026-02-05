@@ -1,0 +1,260 @@
+package com.laptophub.backend;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.laptophub.backend.model.Product;
+import com.laptophub.backend.repository.ProductRepository;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.BeforeAll;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+
+import java.math.BigDecimal;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
+
+/**
+ * Tests de endpoints CRUD para Product
+ * Ejecuta las pruebas en orden específico para mantener consistencia
+ */
+@SpringBootTest
+@AutoConfigureMockMvc
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+public class ProductControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @Autowired
+    private ProductRepository productRepository;
+
+    private static String productId; // Para compartir entre tests
+    private static final String TEST_PRODUCT_NAME = "Laptop Dell XPS 15";
+    private static final String TEST_BRAND = "Dell";
+
+    /**
+     * Limpia la base de datos una sola vez antes de todos los tests
+     */
+    @BeforeAll
+    public static void setUpDatabase() {
+        // La limpieza ocurre una sola vez al inicio
+    }
+
+    /**
+     * TEST 1: Crear producto (POST /api/products)
+     */
+    @Test
+    @Order(1)
+    @SuppressWarnings("null")
+    public void test1_CreateProduct() throws Exception {
+        // Limpiar BD solo antes del primer test
+        productRepository.deleteAll();
+        
+        System.out.println("\n=== TEST 1: Crear nuevo producto (POST /api/products) ===");
+        
+        Product newProduct = Product.builder()
+                .nombre(TEST_PRODUCT_NAME)
+                .descripcion("Laptop de alto rendimiento para profesionales")
+                .precio(new BigDecimal("1299.99"))
+                .stock(25)
+                .marca(TEST_BRAND)
+                .procesador("Intel Core i7-12700H")
+                .ram(16)
+                .almacenamiento(512)
+                .pantalla("15.6 pulgadas FHD")
+                .gpu("NVIDIA RTX 3050")
+                .peso(new BigDecimal("1.86"))
+                .imagenUrl("https://example.com/dell-xps-15.jpg")
+                .build();
+
+        MvcResult result = mockMvc.perform(post("/api/products")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(newProduct)))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").exists())
+                .andExpect(jsonPath("$.nombre").value(TEST_PRODUCT_NAME))
+                .andExpect(jsonPath("$.marca").value(TEST_BRAND))
+                .andExpect(jsonPath("$.precio").value(1299.99))
+                .andExpect(jsonPath("$.stock").value(25))
+                .andReturn();
+
+        // Guardar el ID para los siguientes tests
+        String response = result.getResponse().getContentAsString();
+        Product createdProduct = objectMapper.readValue(response, Product.class);
+        productId = createdProduct.getId().toString();
+        
+        System.out.println("✅ TEST 1 PASÓ: Producto creado con ID: " + productId + "\n");
+    }
+
+    /**
+     * TEST 2: Buscar producto por ID (GET /api/products/{id})
+     */
+    @Test
+    @Order(2)
+    public void test2_FindProductById() throws Exception {
+        System.out.println("\n=== TEST 2: Buscar producto por ID (GET /api/products/{id}) ===");
+        
+        mockMvc.perform(get("/api/products/" + productId))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(productId))
+                .andExpect(jsonPath("$.nombre").value(TEST_PRODUCT_NAME))
+                .andExpect(jsonPath("$.marca").value(TEST_BRAND));
+        
+        System.out.println("✅ TEST 2 PASÓ: Producto encontrado por ID\n");
+    }
+
+    /**
+     * TEST 3: Listar todos los productos (GET /api/products)
+     */
+    @Test
+    @Order(3)
+    public void test3_FindAllProducts() throws Exception {
+        System.out.println("\n=== TEST 3: Listar todos los productos (GET /api/products) ===");
+        
+        mockMvc.perform(get("/api/products"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].id").exists());
+        
+        System.out.println("✅ TEST 3 PASÓ: Lista de productos obtenida\n");
+    }
+
+    /**
+     * TEST 4: Buscar producto por nombre (GET /api/products/search?nombre=...)
+     */
+    @Test
+    @Order(4)
+    public void test4_SearchProductByName() throws Exception {
+        System.out.println("\n=== TEST 4: Buscar producto por nombre (GET /api/products/search) ===");
+        
+        mockMvc.perform(get("/api/products/search")
+                        .param("nombre", "Dell XPS"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].nombre").value(TEST_PRODUCT_NAME));
+        
+        System.out.println("✅ TEST 4 PASÓ: Producto encontrado por nombre\n");
+    }
+
+    /**
+     * TEST 5: Buscar productos por marca (GET /api/products/brand?marca=...)
+     */
+    @Test
+    @Order(5)
+    public void test5_FindProductsByBrand() throws Exception {
+        System.out.println("\n=== TEST 5: Buscar productos por marca (GET /api/products/brand) ===");
+        
+        mockMvc.perform(get("/api/products/brand")
+                        .param("marca", TEST_BRAND))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].marca").value(TEST_BRAND));
+        
+        System.out.println("✅ TEST 5 PASÓ: Productos encontrados por marca\n");
+    }
+
+    /**
+     * TEST 6: Actualizar producto (PUT /api/products/{id})
+     */
+    @Test
+    @Order(6)    @SuppressWarnings("null")    public void test6_UpdateProduct() throws Exception {
+        System.out.println("\n=== TEST 6: Actualizar producto (PUT /api/products/{id}) ===");
+        
+        Product updateData = Product.builder()
+                .nombre("Laptop Dell XPS 15 (Actualizado)")
+                .descripcion("Laptop de alto rendimiento - versión actualizada")
+                .precio(new BigDecimal("1199.99"))
+                .stock(30)
+                .marca(TEST_BRAND)
+                .procesador("Intel Core i7-12700H")
+                .ram(32)
+                .almacenamiento(1024)
+                .pantalla("15.6 pulgadas FHD")
+                .gpu("NVIDIA RTX 3050 Ti")
+                .peso(new BigDecimal("1.86"))
+                .imagenUrl("https://example.com/dell-xps-15-updated.jpg")
+                .build();
+
+        mockMvc.perform(put("/api/products/" + productId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateData)))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(productId))
+                .andExpect(jsonPath("$.nombre").value("Laptop Dell XPS 15 (Actualizado)"))
+                .andExpect(jsonPath("$.precio").value(1199.99))
+                .andExpect(jsonPath("$.ram").value(32))
+                .andExpect(jsonPath("$.almacenamiento").value(1024));
+        
+        System.out.println("✅ TEST 6 PASÓ: Producto actualizado correctamente\n");
+    }
+
+    /**
+     * TEST 7: Eliminar producto (DELETE /api/products/{id})
+     */
+    @Test
+    @Order(7)
+    public void test7_DeleteProduct() throws Exception {
+        System.out.println("\n=== TEST 7: Eliminar producto (DELETE /api/products/{id}) ===");
+        
+        mockMvc.perform(delete("/api/products/" + productId))
+                .andDo(print())
+                .andExpect(status().isOk());
+        
+        System.out.println("✅ TEST 7 PASÓ: Producto eliminado correctamente\n");
+    }
+
+    /**
+     * TEST 8: Crear producto final para verificación manual en BD
+     */
+    @Test
+    @Order(8)    @SuppressWarnings("null")    public void test8_CreateFinalProductForManualVerification() throws Exception {
+        System.out.println("\n=== TEST 8: Crear producto final para verificación manual ===");
+        
+        Product finalProduct = Product.builder()
+                .nombre("Laptop HP Pavilion Gaming")
+                .descripcion("Laptop gaming con excelente relación calidad-precio")
+                .precio(new BigDecimal("899.99"))
+                .stock(15)
+                .marca("HP")
+                .procesador("AMD Ryzen 7 5800H")
+                .ram(16)
+                .almacenamiento(512)
+                .pantalla("15.6 pulgadas FHD 144Hz")
+                .gpu("NVIDIA RTX 3060")
+                .peso(new BigDecimal("2.23"))
+                .imagenUrl("https://example.com/hp-pavilion-gaming.jpg")
+                .build();
+
+        MvcResult result = mockMvc.perform(post("/api/products")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(finalProduct)))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").exists())
+                .andExpect(jsonPath("$.nombre").value("Laptop HP Pavilion Gaming"))
+                .andReturn();
+
+        String response = result.getResponse().getContentAsString();
+        Product createdProduct = objectMapper.readValue(response, Product.class);
+        
+        System.out.println("✅ TEST 8 PASÓ: Producto final creado con ID: " + createdProduct.getId());
+        System.out.println("📋 Verifica en tu gestor de BD el producto: Laptop HP Pavilion Gaming\n");
+    }
+}

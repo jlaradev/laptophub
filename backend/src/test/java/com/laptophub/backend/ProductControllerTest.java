@@ -2,7 +2,12 @@ package com.laptophub.backend;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.laptophub.backend.model.Product;
+import com.laptophub.backend.model.ProductImage;
+import com.laptophub.backend.repository.CartItemRepository;
+import com.laptophub.backend.repository.OrderItemRepository;
 import com.laptophub.backend.repository.ProductRepository;
+import com.laptophub.backend.repository.ProductImageRepository;
+import com.laptophub.backend.repository.ReviewRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -39,6 +44,18 @@ public class ProductControllerTest {
     @Autowired
     private ProductRepository productRepository;
 
+    @Autowired
+    private ReviewRepository reviewRepository;
+
+    @Autowired
+    private ProductImageRepository productImageRepository;
+
+    @Autowired
+    private OrderItemRepository orderItemRepository;
+
+    @Autowired
+    private CartItemRepository cartItemRepository;
+
     private static String productId; // Para compartir entre tests
     private static final String TEST_PRODUCT_NAME = "Laptop Dell XPS 15";
     private static final String TEST_BRAND = "Dell";
@@ -59,6 +76,10 @@ public class ProductControllerTest {
     @SuppressWarnings("null")
     public void test1_CreateProduct() throws Exception {
         // Limpiar BD solo antes del primer test
+        orderItemRepository.deleteAll();
+        cartItemRepository.deleteAll();
+        reviewRepository.deleteAll();
+        productImageRepository.deleteAll();
         productRepository.deleteAll();
         
         System.out.println("\n=== TEST 1: Crear nuevo producto (POST /api/products) ===");
@@ -75,7 +96,6 @@ public class ProductControllerTest {
                 .pantalla("15.6 pulgadas FHD")
                 .gpu("NVIDIA RTX 3050")
                 .peso(new BigDecimal("1.86"))
-                .imagenUrl("https://example.com/dell-xps-15.jpg")
                 .build();
 
         MvcResult result = mockMvc.perform(post("/api/products")
@@ -94,6 +114,15 @@ public class ProductControllerTest {
         String response = result.getResponse().getContentAsString();
         Product createdProduct = objectMapper.readValue(response, Product.class);
         productId = createdProduct.getId().toString();
+        
+        // Agregar imagen principal usando ProductImage
+        ProductImage mainImage = ProductImage.builder()
+                .url("https://example.com/dell-xps-15.jpg")
+                .orden(0)
+                .descripcion("Imagen principal")
+                .product(createdProduct)
+                .build();
+        productImageRepository.save(mainImage);
         
         System.out.println("✅ TEST 1 PASÓ: Producto creado con ID: " + productId + "\n");
     }
@@ -173,7 +202,9 @@ public class ProductControllerTest {
      * TEST 6: Actualizar producto (PUT /api/products/{id})
      */
     @Test
-    @Order(6)    @SuppressWarnings("null")    public void test6_UpdateProduct() throws Exception {
+    @Order(6)
+        @SuppressWarnings("null")
+    public void test6_UpdateProduct() throws Exception {
         System.out.println("\n=== TEST 6: Actualizar producto (PUT /api/products/{id}) ===");
         
         Product updateData = Product.builder()
@@ -188,7 +219,6 @@ public class ProductControllerTest {
                 .pantalla("15.6 pulgadas FHD")
                 .gpu("NVIDIA RTX 3050 Ti")
                 .peso(new BigDecimal("1.86"))
-                .imagenUrl("https://example.com/dell-xps-15-updated.jpg")
                 .build();
 
         mockMvc.perform(put("/api/products/" + productId)
@@ -224,7 +254,9 @@ public class ProductControllerTest {
      * TEST 8: Crear producto final para verificación manual en BD
      */
     @Test
-    @Order(8)    @SuppressWarnings("null")    public void test8_CreateFinalProductForManualVerification() throws Exception {
+    @Order(8)
+        @SuppressWarnings("null")
+    public void test8_CreateFinalProductForVerification() throws Exception {
         System.out.println("\n=== TEST 8: Crear producto final para verificación manual ===");
         
         Product finalProduct = Product.builder()
@@ -239,7 +271,6 @@ public class ProductControllerTest {
                 .pantalla("15.6 pulgadas FHD 144Hz")
                 .gpu("NVIDIA RTX 3060")
                 .peso(new BigDecimal("2.23"))
-                .imagenUrl("https://example.com/hp-pavilion-gaming.jpg")
                 .build();
 
         MvcResult result = mockMvc.perform(post("/api/products")
@@ -254,7 +285,36 @@ public class ProductControllerTest {
         String response = result.getResponse().getContentAsString();
         Product createdProduct = objectMapper.readValue(response, Product.class);
         
+        // Agregar 3 imágenes usando ProductImage
+        ProductImage image1 = ProductImage.builder()
+                .url("https://example.com/hp-pavilion-main.jpg")
+                .orden(0)
+                .descripcion("Vista principal")
+                .product(createdProduct)
+                .build();
+        productImageRepository.save(image1);
+        
+        ProductImage image2 = ProductImage.builder()
+                .url("https://example.com/hp-pavilion-side.jpg")
+                .orden(1)
+                .descripcion("Vista lateral")
+                .product(createdProduct)
+                .build();
+        productImageRepository.save(image2);
+
+        ProductImage image3 = ProductImage.builder()
+                .url("https://example.com/hp-pavilion-ports.jpg")
+                .orden(2)
+                .descripcion("Puertos laterales")
+                .product(createdProduct)
+                .build();
+        productImageRepository.save(image3);
+        
         System.out.println("✅ TEST 8 PASÓ: Producto final creado con ID: " + createdProduct.getId());
-        System.out.println("📋 Verifica en tu gestor de BD el producto: Laptop HP Pavilion Gaming\n");
+                System.out.println("✅ 3 imágenes agregadas a product_images");
+        System.out.println("📋 Verifica en tu gestor de BD:");
+        System.out.println("   - Producto: Laptop HP Pavilion Gaming");
+                System.out.println("   - 3 imágenes en product_images (orden 0-2)");
+        System.out.println("   - Campo imagen_url debe estar NULL\n");
     }
 }

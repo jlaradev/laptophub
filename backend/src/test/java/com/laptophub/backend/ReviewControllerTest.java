@@ -51,6 +51,8 @@ public class ReviewControllerTest {
     private static String userId;
     private static String productId;
     private static String reviewId;
+    
+    private static final String UNIQUE_EMAIL = "review.test." + System.currentTimeMillis() + "@laptophub.com";
 
     /**
      * Limpia la base de datos una sola vez antes de todos los tests
@@ -69,12 +71,13 @@ public class ReviewControllerTest {
     public void test1_SetupUserAndProduct() throws Exception {
         // Limpiar BD solo antes del primer test
         reviewRepository.deleteAll();
+        userRepository.deleteAll();
         
         System.out.println("\n=== TEST 1: Configuración - Crear usuario y producto ===");
         
         // Crear usuario de prueba
         User testUser = User.builder()
-                .email("review.test@laptophub.com")
+                .email(UNIQUE_EMAIL)
                 .password("password123")
                 .nombre("Reviewer")
                 .apellido("Test")
@@ -85,7 +88,7 @@ public class ReviewControllerTest {
         User savedUser = userRepository.save(testUser);
         userId = savedUser.getId().toString();
         
-        // Crear producto de prueba
+        // Crear producto de prueba (sin imagenUrl deprecated)
         Product testProduct = Product.builder()
                 .nombre("Laptop Asus ROG Strix")
                 .descripcion("Laptop gaming de alto rendimiento")
@@ -98,14 +101,21 @@ public class ReviewControllerTest {
                 .pantalla("17.3 pulgadas QHD 165Hz")
                 .gpu("NVIDIA RTX 3070")
                 .peso(new BigDecimal("2.9"))
-                .imagenUrl("https://example.com/asus-rog-strix.jpg")
                 .build();
         
         Product savedProduct = productRepository.save(testProduct);
         productId = savedProduct.getId().toString();
         
+        // Crear imagen principal usando la nueva entidad ProductImage
+        mockMvc.perform(post("/api/products/" + productId + "/images")
+                        .param("url", "https://example.com/asus-rog-strix-main.jpg")
+                        .param("orden", "0")
+                        .param("descripcion", "Imagen principal del producto"))
+                .andExpect(status().isOk());
+        
         System.out.println("✅ TEST 1 PASÓ: Usuario creado con ID: " + userId);
-        System.out.println("✅ Producto creado con ID: " + productId + "\n");
+        System.out.println("✅ Producto creado con ID: " + productId);
+        System.out.println("✅ Imagen principal agregada a product_images\n");
     }
 
     /**
@@ -245,6 +255,8 @@ public class ReviewControllerTest {
         Review createdReview = objectMapper.readValue(response, Review.class);
         
         System.out.println("✅ TEST 8 PASÓ: Review final creada con ID: " + createdReview.getId());
-        System.out.println("📋 Verifica en tu gestor de BD la review del usuario: review.test@laptophub.com\n");
+        System.out.println("📋 Verifica en tu gestor de BD:");
+        System.out.println("   - Review del usuario: " + UNIQUE_EMAIL);
+        System.out.println("   - Review con rating 5 y comentario final\n");
     }
 }

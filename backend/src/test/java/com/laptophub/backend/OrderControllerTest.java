@@ -3,12 +3,14 @@ package com.laptophub.backend;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.laptophub.backend.model.Order;
 import com.laptophub.backend.model.Product;
+import com.laptophub.backend.model.ProductImage;
 import com.laptophub.backend.model.User;
 import com.laptophub.backend.repository.CartItemRepository;
 import com.laptophub.backend.repository.CartRepository;
 import com.laptophub.backend.repository.OrderItemRepository;
 import com.laptophub.backend.repository.OrderRepository;
 import com.laptophub.backend.repository.PaymentRepository;
+import com.laptophub.backend.repository.ProductImageRepository;
 import com.laptophub.backend.repository.ProductRepository;
 import com.laptophub.backend.repository.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -62,6 +64,9 @@ public class OrderControllerTest {
 
     @Autowired
     private ProductRepository productRepository;
+
+        @Autowired
+        private ProductImageRepository productImageRepository;
 
     private static String userId;
     private static String productId;
@@ -117,11 +122,18 @@ public class OrderControllerTest {
                 .pantalla("15.6 pulgadas FHD 144Hz")
                 .gpu("NVIDIA RTX 3060")
                 .peso(new BigDecimal("2.4"))
-                .imagenUrl("https://example.com/acer-nitro-5.jpg")
                 .build();
         
         Product savedProduct = productRepository.save(testProduct);
         productId = savedProduct.getId().toString();
+        
+        ProductImage mainImage = ProductImage.builder()
+                .url("https://example.com/acer-nitro-5.jpg")
+                .orden(0)
+                .descripcion("Imagen principal")
+                .product(savedProduct)
+                .build();
+        productImageRepository.save(mainImage);
         
         System.out.println("✅ TEST 1 PASÓ: Usuario creado con ID: " + userId);
         System.out.println("✅ Producto creado con ID: " + productId + "\n");

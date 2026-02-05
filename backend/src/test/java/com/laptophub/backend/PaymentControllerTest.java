@@ -4,12 +4,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.laptophub.backend.model.Order;
 import com.laptophub.backend.model.Payment;
 import com.laptophub.backend.model.Product;
+import com.laptophub.backend.model.ProductImage;
 import com.laptophub.backend.model.User;
 import com.laptophub.backend.repository.CartItemRepository;
 import com.laptophub.backend.repository.CartRepository;
 import com.laptophub.backend.repository.OrderItemRepository;
 import com.laptophub.backend.repository.OrderRepository;
 import com.laptophub.backend.repository.PaymentRepository;
+import com.laptophub.backend.repository.ProductImageRepository;
 import com.laptophub.backend.repository.ProductRepository;
 import com.laptophub.backend.repository.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -63,6 +65,9 @@ public class PaymentControllerTest {
 
     @Autowired
     private ProductRepository productRepository;
+
+        @Autowired
+        private ProductImageRepository productImageRepository;
 
     private static String userId;
     private static String productId;
@@ -121,11 +126,18 @@ public class PaymentControllerTest {
                 .pantalla("15.6 pulgadas FHD 360Hz")
                 .gpu("NVIDIA RTX 3080")
                 .peso(new BigDecimal("1.98"))
-                .imagenUrl("https://example.com/msi-gs66.jpg")
                 .build();
         
         Product savedProduct = productRepository.save(testProduct);
         productId = savedProduct.getId().toString();
+        
+        ProductImage mainImage = ProductImage.builder()
+                .url("https://example.com/msi-gs66.jpg")
+                .orden(0)
+                .descripcion("Imagen principal")
+                .product(savedProduct)
+                .build();
+        productImageRepository.save(mainImage);
         
         // Agregar producto al carrito
         mockMvc.perform(post("/api/cart/user/" + userId + "/items")

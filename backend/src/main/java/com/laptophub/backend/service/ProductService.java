@@ -59,7 +59,6 @@ public class ProductService {
         if (updatedProduct.getPantalla() != null) existingProduct.setPantalla(updatedProduct.getPantalla());
         if (updatedProduct.getGpu() != null) existingProduct.setGpu(updatedProduct.getGpu());
         if (updatedProduct.getPeso() != null) existingProduct.setPeso(updatedProduct.getPeso());
-        if (updatedProduct.getImagenUrl() != null) existingProduct.setImagenUrl(updatedProduct.getImagenUrl());
         
         return productRepository.save(existingProduct);
     }

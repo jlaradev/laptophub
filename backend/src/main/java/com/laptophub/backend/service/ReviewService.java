@@ -6,6 +6,8 @@ import com.laptophub.backend.model.Review;
 import com.laptophub.backend.model.User;
 import com.laptophub.backend.repository.ReviewRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,9 +53,9 @@ public class ReviewService {
     }
     
     @Transactional(readOnly = true)
-    public List<Review> getReviewsByProduct(Long productId) {
+    public Page<Review> getReviewsByProduct(Long productId, Pageable pageable) {
         Product product = productService.findById(productId);
-        return reviewRepository.findByProduct(product);
+        return reviewRepository.findByProduct(product, pageable);
     }
     
     @Transactional(readOnly = true)
@@ -91,7 +93,8 @@ public class ReviewService {
     
     @Transactional(readOnly = true)
     public Double getAverageRating(Long productId) {
-        List<Review> reviews = getReviewsByProduct(productId);
+        Product product = productService.findById(productId);
+        List<Review> reviews = reviewRepository.findByProduct(product);
         return reviews.stream()
                 .mapToInt(Review::getRating)
                 .average()

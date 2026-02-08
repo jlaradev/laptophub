@@ -146,24 +146,28 @@ public class ProductControllerTest {
     }
 
     /**
-     * TEST 3: Listar todos los productos (GET /api/products)
+     * TEST 3: Listar todos los productos (GET /api/products) con paginación
      */
     @Test
     @Order(3)
     public void test3_FindAllProducts() throws Exception {
         System.out.println("\n=== TEST 3: Listar todos los productos (GET /api/products) ===");
         
-        mockMvc.perform(get("/api/products"))
+        mockMvc.perform(get("/api/products")
+                        .param("page", "0")
+                        .param("size", "10"))
                 .andDo(print())
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$[0].id").exists());
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content[0].id").exists())
+                .andExpect(jsonPath("$.totalElements").exists())
+                .andExpect(jsonPath("$.totalPages").exists());
         
-        System.out.println("✅ TEST 3 PASÓ: Lista de productos obtenida\n");
+        System.out.println("✅ TEST 3 PASÓ: Lista paginada de productos obtenida\n");
     }
 
     /**
-     * TEST 4: Buscar producto por nombre (GET /api/products/search?nombre=...)
+     * TEST 4: Buscar producto por nombre (GET /api/products/search?nombre=...) con paginación
      */
     @Test
     @Order(4)
@@ -171,17 +175,20 @@ public class ProductControllerTest {
         System.out.println("\n=== TEST 4: Buscar producto por nombre (GET /api/products/search) ===");
         
         mockMvc.perform(get("/api/products/search")
-                        .param("nombre", "Dell XPS"))
+                        .param("nombre", "Dell XPS")
+                        .param("page", "0")
+                        .param("size", "10"))
                 .andDo(print())
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$[0].nombre").value(TEST_PRODUCT_NAME));
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content[0].nombre").value(TEST_PRODUCT_NAME))
+                .andExpect(jsonPath("$.totalElements").exists());
         
-        System.out.println("✅ TEST 4 PASÓ: Producto encontrado por nombre\n");
+        System.out.println("✅ TEST 4 PASÓ: Producto encontrado por nombre (paginado)\n");
     }
 
     /**
-     * TEST 5: Buscar productos por marca (GET /api/products/brand?marca=...)
+     * TEST 5: Buscar productos por marca (GET /api/products/brand?marca=...) con paginación
      */
     @Test
     @Order(5)
@@ -189,13 +196,16 @@ public class ProductControllerTest {
         System.out.println("\n=== TEST 5: Buscar productos por marca (GET /api/products/brand) ===");
         
         mockMvc.perform(get("/api/products/brand")
-                        .param("marca", TEST_BRAND))
+                        .param("marca", TEST_BRAND)
+                        .param("page", "0")
+                        .param("size", "10"))
                 .andDo(print())
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$[0].marca").value(TEST_BRAND));
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content[0].marca").value(TEST_BRAND))
+                .andExpect(jsonPath("$.totalElements").exists());
         
-        System.out.println("✅ TEST 5 PASÓ: Productos encontrados por marca\n");
+        System.out.println("✅ TEST 5 PASÓ: Productos encontrados por marca (paginados)\n");
     }
 
     /**

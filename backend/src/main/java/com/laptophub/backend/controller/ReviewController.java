@@ -3,9 +3,10 @@ package com.laptophub.backend.controller;
 import com.laptophub.backend.model.Review;
 import com.laptophub.backend.service.ReviewService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -26,8 +27,8 @@ public class ReviewController {
     }
 
     @GetMapping("/product/{productId}")
-    public List<Review> getByProduct(@PathVariable Long productId) {
-        return reviewService.getReviewsByProduct(productId);
+    public Page<Review> getByProduct(@PathVariable Long productId, Pageable pageable) {
+        return reviewService.getReviewsByProduct(productId, pageable);
     }
 
     @GetMapping("/product/{productId}/user/{userId}")

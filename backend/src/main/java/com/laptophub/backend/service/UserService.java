@@ -4,10 +4,11 @@ package com.laptophub.backend.service;
 import com.laptophub.backend.model.User;
 import com.laptophub.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -38,8 +39,9 @@ public class UserService {
     }
     
     @Transactional(readOnly = true)
-    public List<User> findAll() {
-        return userRepository.findAll();
+    @SuppressWarnings("null")
+    public Page<User> findAll(Pageable pageable) {
+        return userRepository.findAll(pageable);
     }
     
     @Transactional

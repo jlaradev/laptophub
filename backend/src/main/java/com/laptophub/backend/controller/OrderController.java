@@ -4,6 +4,8 @@ import com.laptophub.backend.model.Order;
 import com.laptophub.backend.model.OrderStatus;
 import com.laptophub.backend.service.OrderService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -30,13 +32,13 @@ public class OrderController {
     }
 
     @GetMapping("/user/{userId}")
-    public List<Order> findByUser(@PathVariable UUID userId) {
-        return orderService.findByUserId(userId);
+    public Page<Order> findByUser(@PathVariable UUID userId, Pageable pageable) {
+        return orderService.findByUserId(userId, pageable);
     }
 
     @GetMapping("/status/{estado}")
-    public List<Order> findByStatus(@PathVariable OrderStatus estado) {
-        return orderService.findByStatus(estado);
+    public Page<Order> findByStatus(@PathVariable OrderStatus estado, Pageable pageable) {
+        return orderService.findByStatus(estado, pageable);
     }
 
     @PutMapping("/{orderId}/status/{estado}")

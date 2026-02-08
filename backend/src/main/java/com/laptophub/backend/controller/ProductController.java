@@ -3,9 +3,9 @@ package com.laptophub.backend.controller;
 import com.laptophub.backend.model.Product;
 import com.laptophub.backend.service.ProductService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/products")
@@ -15,8 +15,8 @@ public class ProductController {
     private final ProductService productService;
 
     @GetMapping
-    public List<Product> findAll() {
-        return productService.findAll();
+    public Page<Product> findAll(Pageable pageable) {
+        return productService.findAll(pageable);
     }
 
     @GetMapping("/{id}")
@@ -25,13 +25,13 @@ public class ProductController {
     }
 
     @GetMapping("/search")
-    public List<Product> searchByName(@RequestParam String nombre) {
-        return productService.searchByName(nombre);
+    public Page<Product> searchByName(@RequestParam String nombre, Pageable pageable) {
+        return productService.searchByName(nombre, pageable);
     }
 
     @GetMapping("/brand")
-    public List<Product> findByBrand(@RequestParam String marca) {
-        return productService.findByBrand(marca);
+    public Page<Product> findByBrand(@RequestParam String marca, Pageable pageable) {
+        return productService.findByBrand(marca, pageable);
     }
 
     @PostMapping

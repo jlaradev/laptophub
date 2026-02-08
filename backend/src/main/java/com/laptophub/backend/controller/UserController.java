@@ -3,9 +3,10 @@ package com.laptophub.backend.controller;
 import com.laptophub.backend.model.User;
 import com.laptophub.backend.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -26,8 +27,8 @@ public class UserController {
     }
 
     @GetMapping
-    public List<User> findAll() {
-        return userService.findAll();
+    public Page<User> findAll(Pageable pageable) {
+        return userService.findAll(pageable);
     }
 
     @GetMapping("/email")

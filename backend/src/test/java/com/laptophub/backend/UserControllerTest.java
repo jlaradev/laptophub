@@ -107,20 +107,24 @@ public class UserControllerTest {
     }
 
     /**
-     * TEST 3: Listar todos los usuarios (GET /api/users)
+     * TEST 3: Listar todos los usuarios (GET /api/users) con paginación
      */
     @Test
     @Order(3)
     public void test3_FindAllUsers() throws Exception {
         System.out.println("\n=== TEST 3: Listar todos los usuarios (GET /api/users) ===");
         
-        mockMvc.perform(get("/api/users"))
+        mockMvc.perform(get("/api/users")
+                        .param("page", "0")
+                        .param("size", "10"))
                 .andDo(print())
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$[0].id").exists());
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content[0].id").exists())
+                .andExpect(jsonPath("$.totalElements").exists())
+                .andExpect(jsonPath("$.totalPages").exists());
         
-        System.out.println("✅ TEST 3 PASÓ: Lista de usuarios obtenida\n");
+        System.out.println("✅ TEST 3 PASÓ: Lista paginada de usuarios obtenida\n");
     }
 
     /**

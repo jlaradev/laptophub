@@ -8,6 +8,8 @@ import com.laptophub.backend.repository.OrderItemRepository;
 import com.laptophub.backend.repository.OrderRepository;
 import com.laptophub.backend.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -100,9 +102,20 @@ public class OrderService {
     }
     
     @Transactional(readOnly = true)
+    public Page<Order> findByUserId(UUID userId, Pageable pageable) {
+        User user = userService.findById(userId);
+        return orderRepository.findByUser(user, pageable);
+    }
+    
+    @Transactional(readOnly = true)
     public List<Order> findByUserId(UUID userId) {
         User user = userService.findById(userId);
         return orderRepository.findByUser(user);
+    }
+    
+    @Transactional(readOnly = true)
+    public Page<Order> findByStatus(OrderStatus estado, Pageable pageable) {
+        return orderRepository.findByEstado(estado, pageable);
     }
     
     @Transactional(readOnly = true)

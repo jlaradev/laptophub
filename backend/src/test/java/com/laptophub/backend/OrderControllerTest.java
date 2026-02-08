@@ -185,37 +185,45 @@ public class OrderControllerTest {
     }
 
     /**
-     * TEST 4: Buscar órdenes por usuario (GET /api/orders/user/{userId})
+     * TEST 4: Buscar órdenes por usuario (GET /api/orders/user/{userId}) con paginación
      */
     @Test
     @org.junit.jupiter.api.Order(4)
     public void test4_FindOrdersByUser() throws Exception {
         System.out.println("\n=== TEST 4: Buscar órdenes por usuario (GET /api/orders/user/{userId}) ===");
         
-        mockMvc.perform(get("/api/orders/user/" + userId))
+        mockMvc.perform(get("/api/orders/user/" + userId)
+                        .param("page", "0")
+                        .param("size", "10"))
                 .andDo(print())
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$[0].id").exists());
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content[0].id").exists())
+                .andExpect(jsonPath("$.totalElements").exists())
+                .andExpect(jsonPath("$.totalPages").exists());
         
-        System.out.println("✅ TEST 4 PASÓ: Órdenes encontradas por usuario\n");
+        System.out.println("✅ TEST 4 PASÓ: Órdenes encontradas por usuario (paginadas)\n");
     }
 
     /**
-     * TEST 5: Buscar órdenes por estado (GET /api/orders/status/{estado})
+     * TEST 5: Buscar órdenes por estado (GET /api/orders/status/{estado}) con paginación
      */
     @Test
     @org.junit.jupiter.api.Order(5)
     public void test5_FindOrdersByStatus() throws Exception {
         System.out.println("\n=== TEST 5: Buscar órdenes por estado (GET /api/orders/status/{estado}) ===");
         
-        mockMvc.perform(get("/api/orders/status/PENDIENTE_PAGO"))
+        mockMvc.perform(get("/api/orders/status/PENDIENTE_PAGO")
+                        .param("page", "0")
+                        .param("size", "10"))
                 .andDo(print())
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$[0].estado").value("PENDIENTE_PAGO"));
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content[0].estado").value("PENDIENTE_PAGO"))
+                .andExpect(jsonPath("$.totalElements").exists())
+                .andExpect(jsonPath("$.totalPages").exists());
         
-        System.out.println("✅ TEST 5 PASÓ: Órdenes encontradas por estado\n");
+        System.out.println("✅ TEST 5 PASÓ: Órdenes encontradas por estado (paginadas)\n");
     }
 
     /**

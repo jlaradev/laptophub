@@ -3,6 +3,8 @@ package com.laptophub.backend.repository;
 import com.laptophub.backend.model.Order;
 import com.laptophub.backend.model.OrderStatus;
 import com.laptophub.backend.model.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -11,8 +13,9 @@ import java.util.List;
 
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long> {
+    Page<Order> findByUser(User user, Pageable pageable);
     List<Order> findByUser(User user);
+    Page<Order> findByEstado(OrderStatus estado, Pageable pageable);
     List<Order> findByEstado(OrderStatus estado);
-
     List<Order> findByEstadoAndExpiresAtBefore(OrderStatus estado, LocalDateTime expiresAt);
 }

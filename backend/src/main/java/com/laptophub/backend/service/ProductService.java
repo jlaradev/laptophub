@@ -4,10 +4,10 @@ package com.laptophub.backend.service;
 import com.laptophub.backend.model.Product;
 import com.laptophub.backend.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -16,8 +16,9 @@ public class ProductService {
     private final ProductRepository productRepository;
     
     @Transactional(readOnly = true)
-    public List<Product> findAll() {
-        return productRepository.findAll();
+    @SuppressWarnings("null")
+    public Page<Product> findAll(Pageable pageable) {
+        return productRepository.findAll(pageable);
     }
     
     @Transactional(readOnly = true)
@@ -28,13 +29,13 @@ public class ProductService {
     }
     
     @Transactional(readOnly = true)
-    public List<Product> searchByName(String nombre) {
-        return productRepository.findByNombreContainingIgnoreCase(nombre);
+    public Page<Product> searchByName(String nombre, Pageable pageable) {
+        return productRepository.findByNombreContainingIgnoreCase(nombre, pageable);
     }
     
     @Transactional(readOnly = true)
-    public List<Product> findByBrand(String marca) {
-        return productRepository.findByMarca(marca);
+    public Page<Product> findByBrand(String marca, Pageable pageable) {
+        return productRepository.findByMarca(marca, pageable);
     }
     
     @Transactional

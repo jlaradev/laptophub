@@ -106,16 +106,8 @@ public class ReviewControllerTest {
         Product savedProduct = productRepository.save(testProduct);
         productId = savedProduct.getId().toString();
         
-        // Crear imagen principal usando la nueva entidad ProductImage
-        mockMvc.perform(post("/api/products/" + productId + "/images")
-                        .param("url", "https://example.com/asus-rog-strix-main.jpg")
-                        .param("orden", "0")
-                        .param("descripcion", "Imagen principal del producto"))
-                .andExpect(status().isOk());
-        
         System.out.println("✅ TEST 1 PASÓ: Usuario creado con ID: " + userId);
-        System.out.println("✅ Producto creado con ID: " + productId);
-        System.out.println("✅ Imagen principal agregada a product_images\n");
+        System.out.println("✅ Producto creado con ID: " + productId + "\n");
     }
 
     /**
@@ -146,21 +138,25 @@ public class ReviewControllerTest {
     }
 
     /**
-     * TEST 3: Obtener reviews por producto (GET /api/reviews/product/{productId})
+     * TEST 3: Obtener reviews por producto (GET /api/reviews/product/{productId}) con paginación
      */
     @Test
     @Order(3)
     public void test3_GetReviewsByProduct() throws Exception {
         System.out.println("\n=== TEST 3: Obtener reviews por producto (GET /api/reviews/product/{productId}) ===");
         
-        mockMvc.perform(get("/api/reviews/product/" + productId))
+        mockMvc.perform(get("/api/reviews/product/" + productId)
+                        .param("page", "0")
+                        .param("size", "10"))
                 .andDo(print())
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$[0].id").exists())
-                .andExpect(jsonPath("$[0].rating").value(5));
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content[0].id").exists())
+                .andExpect(jsonPath("$.content[0].rating").value(5))
+                .andExpect(jsonPath("$.totalElements").exists())
+                .andExpect(jsonPath("$.totalPages").exists());
         
-        System.out.println("✅ TEST 3 PASÓ: Reviews obtenidas por producto\n");
+        System.out.println("✅ TEST 3 PASÓ: Reviews obtenidas por producto (paginadas)\n");
     }
 
     /**

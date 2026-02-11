@@ -9,6 +9,7 @@ import com.laptophub.backend.service.CloudinaryService;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -109,10 +110,15 @@ public class ProductImageController {
      */
     @DeleteMapping("/images/{imageId}")
     @SuppressWarnings("null")
-    public ResponseEntity<Void> deleteImage(@PathVariable Long imageId) {
-        if (!productImageRepository.existsById(imageId)) {
+    @Transactional
+    public ResponseEntity<Void> deleteImage(@PathVariable Long imageId) throws IOException {
+        ProductImage image = productImageRepository.findById(imageId)
+                .orElse(null);
+        if (image == null) {
             return ResponseEntity.notFound().build();
         }
+
+        cloudinaryService.deleteImage(image.getUrl());
         productImageRepository.deleteById(imageId);
         return ResponseEntity.ok().build();
     }
@@ -122,7 +128,13 @@ public class ProductImageController {
      * DELETE /api/products/{productId}/images
      */
     @DeleteMapping("/{productId}/images")
-    public ResponseEntity<Void> deleteAllImagesByProduct(@PathVariable Long productId) {
+    @Transactional
+    public ResponseEntity<Void> deleteAllImagesByProduct(@PathVariable Long productId) throws IOException {
+        List<ProductImage> images = productImageRepository.findByProductIdOrderByOrdenAsc(productId);
+        for (ProductImage image : images) {
+            cloudinaryService.deleteImage(image.getUrl());
+        }
+
         productImageRepository.deleteByProductId(productId);
         return ResponseEntity.ok().build();
     }

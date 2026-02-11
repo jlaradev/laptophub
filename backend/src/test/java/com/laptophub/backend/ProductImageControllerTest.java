@@ -120,7 +120,6 @@ public class ProductImageControllerTest {
      */
     @Test
     @Order(1)
-    @SuppressWarnings("null")
     public void test1_SetupProduct() throws Exception {
         // Limpiar BD solo antes del primer test (respetar orden de foreign keys)
         cartItemRepository.deleteAll();
@@ -294,12 +293,31 @@ public class ProductImageControllerTest {
     }
 
     /**
-     * TEST 8: Crear imágenes finales para verificación manual
+     * TEST 8: Eliminar todas las imágenes del producto (DELETE /api/products/{productId}/images)
      */
     @Test
     @Order(8)
-    public void test8_CreateFinalImagesForVerification() throws Exception {
-        System.out.println("\n=== TEST 8: Crear imágenes finales para verificación manual ===");
+    public void test8_DeleteAllImagesByProduct() throws Exception {
+        System.out.println("\n=== TEST 8: Eliminar todas las imágenes del producto ===");
+
+        mockMvc.perform(delete("/api/products/" + productId + "/images"))
+                .andDo(print())
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/products/" + productId + "/images"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+
+        System.out.println("✅ TEST 8 PASÓ: Todas las imágenes eliminadas correctamente\n");
+    }
+
+    /**
+     * TEST 9: Crear imágenes finales para verificación manual
+     */
+    @Test
+    @Order(9)
+    public void test9_CreateFinalImagesForVerification() throws Exception {
+        System.out.println("\n=== TEST 9: Crear imágenes finales para verificación manual ===");
         
         byte[] imageContent3 = getImageContent("laptop-keyboard.jpg");
         byte[] imageContent4 = getImageContent("laptop-ports.jpg");
@@ -320,7 +338,7 @@ public class ProductImageControllerTest {
                         .param("descripcion", "Puertos laterales"))
                 .andExpect(status().isOk());
         
-        System.out.println("✅ TEST 8 PASÓ: Imágenes finales creadas");
+        System.out.println("✅ TEST 9 PASÓ: Imágenes finales creadas");
         System.out.println("📋 Verifica en tu gestor de BD las imágenes del producto ID: " + productId + "\n");
     }
 }

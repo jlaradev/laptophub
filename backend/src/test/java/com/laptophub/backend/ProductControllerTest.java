@@ -24,6 +24,7 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import java.math.BigDecimal;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
@@ -76,7 +77,6 @@ public class ProductControllerTest {
      */
     @Test
     @Order(1)
-    @SuppressWarnings("null")
     public void test1_CreateProduct() throws Exception {
         // Limpiar BD solo antes del primer test
         orderItemRepository.deleteAll();
@@ -220,7 +220,6 @@ public class ProductControllerTest {
      */
     @Test
     @Order(6)
-        @SuppressWarnings("null")
     public void test6_UpdateProduct() throws Exception {
         System.out.println("\n=== TEST 6: Actualizar producto (PUT /api/products/{id}) ===");
         
@@ -263,6 +262,9 @@ public class ProductControllerTest {
         mockMvc.perform(delete("/api/products/" + productId))
                 .andDo(print())
                 .andExpect(status().isOk());
+
+        assertTrue(productImageRepository.findByProductIdOrderByOrdenAsc(Long.parseLong(productId)).isEmpty(),
+                "Las imagenes deben eliminarse al borrar el producto");
         
         System.out.println("✅ TEST 7 PASÓ: Producto eliminado correctamente\n");
     }
@@ -272,7 +274,6 @@ public class ProductControllerTest {
      */
     @Test
     @Order(8)
-        @SuppressWarnings("null")
     public void test8_CreateFinalProductForVerification() throws Exception {
         System.out.println("\n=== TEST 8: Crear producto final para verificación manual ===");
         

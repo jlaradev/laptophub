@@ -25,9 +25,9 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final ProductImageRepository productImageRepository;
     private final ReviewRepository reviewRepository;
+    private final CloudinaryService cloudinaryService;
     
     @Transactional(readOnly = true)
-    @SuppressWarnings("null")
     public Page<ProductListDTO> findAll(@NonNull Pageable pageable) {
         return productRepository.findAll(pageable).map(product -> {
             List<ProductImage> images = productImageRepository.findByProductIdOrderByOrdenAsc(product.getId());
@@ -111,6 +111,16 @@ public class ProductService {
         if (!productRepository.existsById(id)) {
             throw new ResourceNotFoundException("Producto no encontrado con id: " + id);
         }
+
+        List<ProductImage> images = productImageRepository.findByProductIdOrderByOrdenAsc(id);
+        for (ProductImage image : images) {
+            try {
+                cloudinaryService.deleteImage(image.getUrl());
+            } catch (java.io.IOException e) {
+                throw new RuntimeException("Error al eliminar imagen en Cloudinary", e);
+            }
+        }
+
         productRepository.deleteById(id);
     }
     

@@ -38,16 +38,42 @@ public class CloudinaryService {
     }
 
     private String extractPublicIdFromUrl(String url) {
+        if (url == null || url.isBlank()) {
+            return null;
+        }
+
         try {
             // Formato típico: https://res.cloudinary.com/{cloud}/image/upload/v{version}/{public_id}.{ext}
-            int startIndex = url.lastIndexOf("/") + 1;
-            int endIndex = url.lastIndexOf(".");
-            if (startIndex > 0 && endIndex > startIndex) {
-                return url.substring(startIndex, endIndex);
+            int uploadIndex = url.indexOf("/upload/");
+            if (uploadIndex == -1) {
+                return null;
             }
+
+            String path = url.substring(uploadIndex + "/upload/".length());
+            if (path.startsWith("v")) {
+                int slashIndex = path.indexOf("/");
+                if (slashIndex > 1 && isAllDigits(path.substring(1, slashIndex))) {
+                    path = path.substring(slashIndex + 1);
+                }
+            }
+
+            int dotIndex = path.lastIndexOf(".");
+            if (dotIndex > 0) {
+                path = path.substring(0, dotIndex);
+            }
+
+            return path.isBlank() ? null : path;
         } catch (Exception e) {
             return null;
         }
-        return null;
+    }
+
+    private boolean isAllDigits(String value) {
+        for (int i = 0; i < value.length(); i++) {
+            if (!Character.isDigit(value.charAt(i))) {
+                return false;
+            }
+        }
+        return true;
     }
 }

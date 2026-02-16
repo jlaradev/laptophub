@@ -5,7 +5,6 @@ import com.laptophub.backend.dto.AddToCartDTO;
 import com.laptophub.backend.dto.CreateOrderDTO;
 import com.laptophub.backend.model.Product;
 import com.laptophub.backend.model.ProductImage;
-import com.laptophub.backend.model.User;
 import com.laptophub.backend.repository.CartItemRepository;
 import com.laptophub.backend.repository.CartRepository;
 import com.laptophub.backend.repository.OrderItemRepository;
@@ -14,6 +13,8 @@ import com.laptophub.backend.repository.PaymentRepository;
 import com.laptophub.backend.repository.ProductImageRepository;
 import com.laptophub.backend.repository.ProductRepository;
 import com.laptophub.backend.repository.UserRepository;
+import com.laptophub.backend.support.TestAuthHelper;
+import com.laptophub.backend.support.TestAuthHelper.AuthInfo;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.TestMethodOrder;
@@ -22,6 +23,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -65,6 +67,9 @@ public class OrderControllerTest {
     @Autowired
     private UserRepository userRepository;
 
+        @Autowired
+        private PasswordEncoder passwordEncoder;
+
     @Autowired
     private ProductRepository productRepository;
 
@@ -74,6 +79,8 @@ public class OrderControllerTest {
     private static String userId;
     private static String productId;
     private static String orderId;
+        private static String userToken;
+        private static String adminToken;
     
     private static final String UNIQUE_EMAIL = "order.test." + System.currentTimeMillis() + "@laptophub.com";
 
@@ -101,17 +108,24 @@ public class OrderControllerTest {
         
         System.out.println("\n=== TEST 1: Configuración - Crear usuario y producto ===");
         
-        User testUser = User.builder()
-                .email(UNIQUE_EMAIL)
-                .password("password123")
-                .nombre("Order")
-                .apellido("Tester")
-                .telefono("555-0003")
-                .direccion("Order Test Address")
-                .build();
-        
-        User savedUser = userRepository.save(testUser);
-        userId = savedUser.getId().toString();
+        AuthInfo authInfo = TestAuthHelper.registerAndLogin(
+                mockMvc,
+                objectMapper,
+                UNIQUE_EMAIL,
+                "password123",
+                "Order",
+                "Tester"
+        );
+        userId = authInfo.getUserId();
+        userToken = authInfo.getToken();
+        adminToken = TestAuthHelper.createAdminAndLogin(
+                userRepository,
+                passwordEncoder,
+                mockMvc,
+                objectMapper,
+                TestAuthHelper.uniqueEmail("order.admin"),
+                "admin123"
+        );
         
         Product testProduct = Product.builder()
                 .nombre("Laptop Acer Nitro 5")
@@ -157,6 +171,7 @@ public class OrderControllerTest {
                 .build();
         
         mockMvc.perform(post("/api/cart/user/" + userId + "/items")
+                        .header("Authorization", "Bearer " + userToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(addToCart)))
                 .andExpect(status().isOk());
@@ -167,6 +182,7 @@ public class OrderControllerTest {
                 .build();
         
         MvcResult result = mockMvc.perform(post("/api/orders/user/" + userId)
+                        .header("Authorization", "Bearer " + userToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(orderDTO)))
                 .andDo(print())
@@ -192,7 +208,8 @@ public class OrderControllerTest {
     public void test3_FindOrderById() throws Exception {
         System.out.println("\n=== TEST 3: Buscar orden por ID (GET /api/orders/{orderId}) ===");
         
-        mockMvc.perform(get("/api/orders/" + orderId))
+        mockMvc.perform(get("/api/orders/" + orderId)
+                        .header("Authorization", "Bearer " + userToken))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(orderId))
@@ -210,6 +227,7 @@ public class OrderControllerTest {
         System.out.println("\n=== TEST 4: Buscar órdenes por usuario (GET /api/orders/user/{userId}) ===");
         
         mockMvc.perform(get("/api/orders/user/" + userId)
+                        .header("Authorization", "Bearer " + userToken)
                         .param("page", "0")
                         .param("size", "10"))
                 .andDo(print())
@@ -231,6 +249,7 @@ public class OrderControllerTest {
         System.out.println("\n=== TEST 5: Buscar órdenes por estado (GET /api/orders/status/{estado}) ===");
         
         mockMvc.perform(get("/api/orders/status/PENDIENTE_PAGO")
+                        .header("Authorization", "Bearer " + adminToken)
                         .param("page", "0")
                         .param("size", "10"))
                 .andDo(print())
@@ -251,7 +270,8 @@ public class OrderControllerTest {
     public void test6_UpdateOrderStatus() throws Exception {
         System.out.println("\n=== TEST 6: Actualizar estado de la orden (PUT /api/orders/{orderId}/status/{estado}) ===");
         
-        mockMvc.perform(put("/api/orders/" + orderId + "/status/PROCESANDO"))
+        mockMvc.perform(put("/api/orders/" + orderId + "/status/PROCESANDO")
+                        .header("Authorization", "Bearer " + adminToken))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(orderId))
@@ -268,7 +288,8 @@ public class OrderControllerTest {
     public void test7_ExpirePendingOrders() throws Exception {
         System.out.println("\n=== TEST 7: Expirar órdenes pendientes (POST /api/orders/expire) ===");
         
-        mockMvc.perform(post("/api/orders/expire"))
+        mockMvc.perform(post("/api/orders/expire")
+                        .header("Authorization", "Bearer " + adminToken))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isNumber());
@@ -285,6 +306,7 @@ public class OrderControllerTest {
         System.out.println("\n=== TEST 8: Listar todas las órdenes (GET /api/orders) ===");
         
         mockMvc.perform(get("/api/orders")
+                        .header("Authorization", "Bearer " + adminToken)
                         .param("page", "0")
                         .param("size", "10"))
                 .andDo(print())
@@ -310,6 +332,7 @@ public class OrderControllerTest {
                 .build();
         
         mockMvc.perform(post("/api/cart/user/" + userId + "/items")
+                        .header("Authorization", "Bearer " + userToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(addToCart)))
                 .andExpect(status().isOk());
@@ -319,6 +342,7 @@ public class OrderControllerTest {
                 .build();
         
         MvcResult result = mockMvc.perform(post("/api/orders/user/" + userId)
+                        .header("Authorization", "Bearer " + userToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(orderDTO)))
                 .andExpect(status().isOk())
@@ -328,7 +352,8 @@ public class OrderControllerTest {
         com.fasterxml.jackson.databind.JsonNode jsonNode = objectMapper.readTree(response);
         String cancelOrderId = jsonNode.get("id").asText();
         
-        mockMvc.perform(post("/api/orders/" + cancelOrderId + "/cancel"))
+        mockMvc.perform(post("/api/orders/" + cancelOrderId + "/cancel")
+                        .header("Authorization", "Bearer " + userToken))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.estado").value("CANCELADO"));
@@ -350,6 +375,7 @@ public class OrderControllerTest {
                 .build();
         
         mockMvc.perform(post("/api/cart/user/" + userId + "/items")
+                        .header("Authorization", "Bearer " + userToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(addToCart)))
                 .andExpect(status().isOk());
@@ -359,6 +385,7 @@ public class OrderControllerTest {
                 .build();
         
         MvcResult result = mockMvc.perform(post("/api/orders/user/" + userId)
+                        .header("Authorization", "Bearer " + userToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(orderDTO)))
                 .andDo(print())

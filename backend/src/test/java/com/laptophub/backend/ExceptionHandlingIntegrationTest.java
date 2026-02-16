@@ -4,18 +4,27 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.laptophub.backend.dto.AddToCartDTO;
 import com.laptophub.backend.dto.CreateReviewDTO;
 import com.laptophub.backend.exception.ApiResponse;
+import com.laptophub.backend.exception.GlobalExceptionHandler;
 import com.laptophub.backend.model.Product;
 import com.laptophub.backend.model.User;
 import com.laptophub.backend.repository.ProductRepository;
 import com.laptophub.backend.repository.UserRepository;
+import com.laptophub.backend.support.TestAuthHelper;
+import com.laptophub.backend.support.TestAuthHelper.AuthInfo;
+import com.stripe.exception.StripeException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.mockito.Mockito;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -41,21 +50,36 @@ public class ExceptionHandlingIntegrationTest {
     @Autowired
     private ProductRepository productRepository;
 
+        @Autowired
+        private PasswordEncoder passwordEncoder;
+
     private User testUser;
     private Product testProduct;
+        private String userToken;
+        private String adminToken;
 
     @BeforeEach
     @SuppressWarnings("null")
-    public void setup() {
-        testUser = User.builder()
-                .email("exception.test." + System.currentTimeMillis() + "@test.com")
-                .password("test123")
-                .nombre("Test")
-                .apellido("User")
-                .telefono("555-1234")
-                .direccion("Test Address")
-                .build();
-        userRepository.save(testUser);
+        public void setup() throws Exception {
+        AuthInfo authInfo = TestAuthHelper.registerAndLogin(
+                mockMvc,
+                objectMapper,
+                TestAuthHelper.uniqueEmail("exception.test"),
+                "test1234",
+                "Test",
+                "User"
+        );
+        testUser = userRepository.findById(java.util.UUID.fromString(authInfo.getUserId()))
+                .orElseThrow();
+        userToken = authInfo.getToken();
+        adminToken = TestAuthHelper.createAdminAndLogin(
+                userRepository,
+                passwordEncoder,
+                mockMvc,
+                objectMapper,
+                TestAuthHelper.uniqueEmail("exception.admin"),
+                "admin123"
+        );
 
         testProduct = Product.builder()
                 .nombre("Test Product")
@@ -126,6 +150,7 @@ public class ExceptionHandlingIntegrationTest {
                 .build();
 
         MvcResult result = mockMvc.perform(post("/api/cart/user/" + userId + "/items")
+                .header("Authorization", "Bearer " + userToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(invalidDto)))
                 .andExpect(status().isBadRequest())
@@ -152,6 +177,7 @@ public class ExceptionHandlingIntegrationTest {
                 .build();
         
         MvcResult result = mockMvc.perform(post("/api/reviews")
+                .header("Authorization", "Bearer " + userToken)
                 .param("userId", testUser.getId().toString())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(invalidDto)))
@@ -171,7 +197,8 @@ public class ExceptionHandlingIntegrationTest {
 
     @Test
     public void testResourceNotFoundExceptionWhenProductToDeleteDoesNotExist() throws Exception {
-        MvcResult result = mockMvc.perform(delete("/api/products/99999"))
+        MvcResult result = mockMvc.perform(delete("/api/products/99999")
+                .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isNotFound())
                 .andReturn();
 
@@ -206,4 +233,27 @@ public class ExceptionHandlingIntegrationTest {
         assertThat(response.getPath()).isNotNull();
         System.out.println("\n✅ Todos los tests de excepciones completados exitosamente");
     }
+
+        @Test
+        public void testStripeExceptionHandlerStructure() {
+                GlobalExceptionHandler handler = new GlobalExceptionHandler();
+                StripeException stripeException = Mockito.mock(StripeException.class);
+                HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+
+                Mockito.when(stripeException.getMessage()).thenReturn("Stripe error");
+                Mockito.when(request.getRequestURI()).thenReturn("/api/payments/create");
+
+                ResponseEntity<ApiResponse<?>> responseEntity = handler.handleStripeException(stripeException, request);
+                ApiResponse<?> response = responseEntity.getBody();
+
+                System.out.println("\n=== TEST 7: StripeException (handler) ===");
+                System.out.println("Response: " + objectMapper.valueToTree(response));
+
+                assertThat(responseEntity.getStatusCode().value()).isEqualTo(502);
+                assertThat(response).isNotNull();
+                assertThat(response.isSuccess()).isFalse();
+                assertThat(response.getMessage()).contains("Stripe error");
+                assertThat(response.getTimestamp()).isNotNull();
+                assertThat(response.getPath()).isEqualTo("/api/payments/create");
+        }
 }

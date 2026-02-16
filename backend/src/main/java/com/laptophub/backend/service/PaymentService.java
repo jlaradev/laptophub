@@ -72,8 +72,8 @@ public class PaymentService {
     @Transactional(readOnly = true)
     public Payment findByStripePaymentId(String stripePaymentId) {
         return paymentRepository.findByStripePaymentId(stripePaymentId)
-                .orElseThrow(() -> new RuntimeException(
-                        "Payment no encontrado con stripePaymentId: " + stripePaymentId));
+            .orElseThrow(() -> new ResourceNotFoundException(
+                "Pago no encontrado con stripePaymentId: " + stripePaymentId));
     }
     
     @Transactional

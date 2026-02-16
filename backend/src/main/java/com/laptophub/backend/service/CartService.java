@@ -93,7 +93,7 @@ public class CartService {
         }
         
         CartItem item = cartItemRepository.findById(cartItemId)
-                .orElseThrow(() -> new ResourceNotFoundException("CartItem no encontrado con id: " + cartItemId));
+                .orElseThrow(() -> new ResourceNotFoundException("Item de carrito no encontrado con id: " + cartItemId));
         
         item.setCantidad(newQuantity);
         return cartItemRepository.save(item);
@@ -103,7 +103,7 @@ public class CartService {
     @SuppressWarnings("null")
     public void removeFromCart(Long cartItemId) {
         CartItem item = cartItemRepository.findById(cartItemId)
-                .orElseThrow(() -> new RuntimeException("CartItem no encontrado con id: " + cartItemId));
+                .orElseThrow(() -> new ResourceNotFoundException("Item de carrito no encontrado con id: " + cartItemId));
         cartItemRepository.delete(item);
     }
     
@@ -118,7 +118,7 @@ public class CartService {
     @SuppressWarnings("null")
     public BigDecimal calculateTotal(Long cartId) {
         Cart cart = cartRepository.findById(cartId)
-                .orElseThrow(() -> new RuntimeException("Cart no encontrado con id: " + cartId));
+                .orElseThrow(() -> new ResourceNotFoundException("Carrito no encontrado con id: " + cartId));
         
         return cart.getItems().stream()
                 .map(item -> item.getProduct().getPrecio()

@@ -3,10 +3,11 @@ package com.laptophub.backend;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.laptophub.backend.dto.CreateReviewDTO;
 import com.laptophub.backend.model.Product;
-import com.laptophub.backend.model.User;
 import com.laptophub.backend.repository.ProductRepository;
 import com.laptophub.backend.repository.ReviewRepository;
 import com.laptophub.backend.repository.UserRepository;
+import com.laptophub.backend.support.TestAuthHelper;
+import com.laptophub.backend.support.TestAuthHelper.AuthInfo;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -53,6 +54,7 @@ public class ReviewControllerTest {
     private static String userId;
     private static String productId;
     private static String reviewId;
+        private static String userToken;
     
     private static final String UNIQUE_EMAIL = "review.test." + System.currentTimeMillis() + "@laptophub.com";
 
@@ -77,18 +79,16 @@ public class ReviewControllerTest {
         
         System.out.println("\n=== TEST 1: Configuración - Crear usuario y producto ===");
         
-        // Crear usuario de prueba
-        User testUser = User.builder()
-                .email(UNIQUE_EMAIL)
-                .password("password123")
-                .nombre("Reviewer")
-                .apellido("Test")
-                .telefono("555-0002")
-                .direccion("Review Test Address")
-                .build();
-        
-        User savedUser = userRepository.save(testUser);
-        userId = savedUser.getId().toString();
+        AuthInfo authInfo = TestAuthHelper.registerAndLogin(
+                mockMvc,
+                objectMapper,
+                UNIQUE_EMAIL,
+                "password123",
+                "Reviewer",
+                "Test"
+        );
+        userId = authInfo.getUserId();
+        userToken = authInfo.getToken();
         
         // Crear producto de prueba (sin imagenUrl deprecated)
         Product testProduct = Product.builder()
@@ -127,6 +127,7 @@ public class ReviewControllerTest {
                 .build();
         
         MvcResult result = mockMvc.perform(post("/api/reviews")
+                        .header("Authorization", "Bearer " + userToken)
                         .param("userId", userId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(reviewDTO)))
@@ -175,7 +176,8 @@ public class ReviewControllerTest {
     public void test4_GetUserReviewForProduct() throws Exception {
         System.out.println("\n=== TEST 4: Obtener review de usuario específico (GET /api/reviews/product/{productId}/user/{userId}) ===");
         
-        mockMvc.perform(get("/api/reviews/product/" + productId + "/user/" + userId))
+        mockMvc.perform(get("/api/reviews/product/" + productId + "/user/" + userId)
+                        .header("Authorization", "Bearer " + userToken))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(reviewId))
@@ -199,6 +201,7 @@ public class ReviewControllerTest {
                 .build();
         
         mockMvc.perform(put("/api/reviews/" + reviewId)
+                        .header("Authorization", "Bearer " + userToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDTO)))
                 .andDo(print())
@@ -234,7 +237,8 @@ public class ReviewControllerTest {
     public void test7_DeleteReview() throws Exception {
         System.out.println("\n=== TEST 7: Eliminar review (DELETE /api/reviews/{reviewId}) ===");
         
-        mockMvc.perform(delete("/api/reviews/" + reviewId))
+        mockMvc.perform(delete("/api/reviews/" + reviewId)
+                        .header("Authorization", "Bearer " + userToken))
                 .andDo(print())
                 .andExpect(status().isOk());
         
@@ -256,6 +260,7 @@ public class ReviewControllerTest {
                 .build();
         
         MvcResult result = mockMvc.perform(post("/api/reviews")
+                        .header("Authorization", "Bearer " + userToken)
                         .param("userId", userId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(finalReviewDTO)))

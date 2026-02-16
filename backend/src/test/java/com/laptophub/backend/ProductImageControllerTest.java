@@ -8,6 +8,8 @@ import com.laptophub.backend.repository.OrderItemRepository;
 import com.laptophub.backend.repository.ProductImageRepository;
 import com.laptophub.backend.repository.ProductRepository;
 import com.laptophub.backend.repository.ReviewRepository;
+import com.laptophub.backend.repository.UserRepository;
+import com.laptophub.backend.support.TestAuthHelper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -19,6 +21,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -60,9 +63,16 @@ public class ProductImageControllerTest {
     @Autowired
     private OrderItemRepository orderItemRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     private static String productId;
     private static String imageId1;
     private static String imageId2;
+    private static String adminToken;
 
     /**
      * Obtiene el MediaType basado en la extensión del archivo
@@ -130,6 +140,15 @@ public class ProductImageControllerTest {
         
         System.out.println("\n=== TEST 1: Configuración - Crear producto ===");
         
+        adminToken = TestAuthHelper.createAdminAndLogin(
+            userRepository,
+            passwordEncoder,
+            mockMvc,
+            objectMapper,
+            TestAuthHelper.uniqueEmail("product.image.admin"),
+            "admin123"
+        );
+
         Product testProduct = Product.builder()
                 .nombre("Laptop ASUS ROG Strix")
                 .descripcion("Laptop gaming de alto rendimiento")
@@ -145,6 +164,7 @@ public class ProductImageControllerTest {
                 .build();
 
         MvcResult result = mockMvc.perform(post("/api/products")
+                .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(testProduct)))
                 .andExpect(status().isOk())
@@ -168,10 +188,11 @@ public class ProductImageControllerTest {
         byte[] imageContent = getImageContent("laptop-front.jpg");
         
         MvcResult result = mockMvc.perform(multipart("/api/products/" + productId + "/images")
-                        .file(new MockMultipartFile(
-                                "file", "laptop-front.jpg", getMediaType("laptop-front.jpg"), imageContent))
-                        .param("orden", "1")
-                        .param("descripcion", "Vista frontal"))
+                .file(new MockMultipartFile(
+                    "file", "laptop-front.jpg", getMediaType("laptop-front.jpg"), imageContent))
+                .param("orden", "1")
+                .param("descripcion", "Vista frontal")
+                .header("Authorization", "Bearer " + adminToken))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").exists())
@@ -198,10 +219,11 @@ public class ProductImageControllerTest {
         byte[] imageContent = getImageContent("laptop-side.jpg");
         
         MvcResult result = mockMvc.perform(multipart("/api/products/" + productId + "/images")
-                        .file(new MockMultipartFile(
-                                "file", "laptop-side.jpg", getMediaType("laptop-side.jpg"), imageContent))
-                        .param("orden", "2")
-                        .param("descripcion", "Vista lateral"))
+                .file(new MockMultipartFile(
+                    "file", "laptop-side.jpg", getMediaType("laptop-side.jpg"), imageContent))
+                .param("orden", "2")
+                .param("descripcion", "Vista lateral")
+                .header("Authorization", "Bearer " + adminToken))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").exists())
@@ -261,6 +283,7 @@ public class ProductImageControllerTest {
         System.out.println("\n=== TEST 6: Actualizar imagen ===");
         
         mockMvc.perform(put("/api/products/images/" + imageId1)
+                .header("Authorization", "Bearer " + adminToken)
                         .param("url", "https://example.com/asus-rog-front-updated.jpg")
                         .param("descripcion", "Vista frontal actualizada"))
                 .andDo(print())
@@ -280,7 +303,8 @@ public class ProductImageControllerTest {
     public void test7_DeleteImage() throws Exception {
         System.out.println("\n=== TEST 7: Eliminar imagen ===");
         
-        mockMvc.perform(delete("/api/products/images/" + imageId2))
+        mockMvc.perform(delete("/api/products/images/" + imageId2)
+                .header("Authorization", "Bearer " + adminToken))
                 .andDo(print())
                 .andExpect(status().isOk());
         
@@ -300,7 +324,8 @@ public class ProductImageControllerTest {
     public void test8_DeleteAllImagesByProduct() throws Exception {
         System.out.println("\n=== TEST 8: Eliminar todas las imágenes del producto ===");
 
-        mockMvc.perform(delete("/api/products/" + productId + "/images"))
+        mockMvc.perform(delete("/api/products/" + productId + "/images")
+                .header("Authorization", "Bearer " + adminToken))
                 .andDo(print())
                 .andExpect(status().isOk());
 
@@ -324,18 +349,20 @@ public class ProductImageControllerTest {
         
         // Agregar tercera imagen
         mockMvc.perform(multipart("/api/products/" + productId + "/images")
-                        .file(new MockMultipartFile(
-                                "file", "laptop-keyboard.jpg", getMediaType("laptop-keyboard.jpg"), imageContent3))
-                        .param("orden", "3")
-                        .param("descripcion", "Vista del teclado RGB"))
+                .file(new MockMultipartFile(
+                    "file", "laptop-keyboard.jpg", getMediaType("laptop-keyboard.jpg"), imageContent3))
+                .param("orden", "3")
+                .param("descripcion", "Vista del teclado RGB")
+                .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk());
         
         // Agregar cuarta imagen
         mockMvc.perform(multipart("/api/products/" + productId + "/images")
-                        .file(new MockMultipartFile(
-                                "file", "laptop-ports.jpg", getMediaType("laptop-ports.jpg"), imageContent4))
-                        .param("orden", "4")
-                        .param("descripcion", "Puertos laterales"))
+                .file(new MockMultipartFile(
+                    "file", "laptop-ports.jpg", getMediaType("laptop-ports.jpg"), imageContent4))
+                .param("orden", "4")
+                .param("descripcion", "Puertos laterales")
+                .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk());
         
         System.out.println("✅ TEST 9 PASÓ: Imágenes finales creadas");

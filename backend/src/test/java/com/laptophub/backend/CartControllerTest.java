@@ -5,12 +5,12 @@ import com.laptophub.backend.dto.AddToCartDTO;
 import com.laptophub.backend.model.Cart;
 import com.laptophub.backend.model.Product;
 import com.laptophub.backend.model.ProductImage;
-import com.laptophub.backend.model.User;
 import com.laptophub.backend.repository.CartItemRepository;
 import com.laptophub.backend.repository.CartRepository;
 import com.laptophub.backend.repository.ProductImageRepository;
 import com.laptophub.backend.repository.ProductRepository;
-import com.laptophub.backend.repository.UserRepository;
+import com.laptophub.backend.support.TestAuthHelper;
+import com.laptophub.backend.support.TestAuthHelper.AuthInfo;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -51,9 +51,6 @@ public class CartControllerTest {
     private CartItemRepository cartItemRepository;
 
     @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
     private ProductRepository productRepository;
 
         @Autowired
@@ -62,6 +59,7 @@ public class CartControllerTest {
     private static String userId;
     private static String productId;
     private static String cartItemId;
+        private static String authToken;
 
     /**
      * Limpia la base de datos una sola vez antes de todos los tests
@@ -84,18 +82,16 @@ public class CartControllerTest {
         
         System.out.println("\n=== TEST 1: Configuración - Crear usuario y producto ===");
         
-        // Crear usuario de prueba
-        User testUser = User.builder()
-                .email("cart.test@laptophub.com")
-                .password("password123")
-                .nombre("Test")
-                .apellido("Cart")
-                .telefono("555-0001")
-                .direccion("Cart Test Address")
-                .build();
-        
-        User savedUser = userRepository.save(testUser);
-        userId = savedUser.getId().toString();
+        AuthInfo authInfo = TestAuthHelper.registerAndLogin(
+                mockMvc,
+                objectMapper,
+                TestAuthHelper.uniqueEmail("cart.test"),
+                "password123",
+                "Test",
+                "Cart"
+        );
+        userId = authInfo.getUserId();
+        authToken = authInfo.getToken();
         
         // Crear producto de prueba
         Product testProduct = Product.builder()
@@ -135,7 +131,8 @@ public class CartControllerTest {
     public void test2_GetOrCreateCartByUser() throws Exception {
         System.out.println("\n=== TEST 2: Obtener/crear carrito por usuario (GET /api/cart/user/{userId}) ===");
         
-        mockMvc.perform(get("/api/cart/user/" + userId))
+        mockMvc.perform(get("/api/cart/user/" + userId)
+                        .header("Authorization", "Bearer " + authToken))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").exists())
@@ -160,6 +157,7 @@ public class CartControllerTest {
                 .build();
         
         mockMvc.perform(post("/api/cart/user/" + userId + "/items")
+                        .header("Authorization", "Bearer " + authToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(addToCart)))
                 .andDo(print())
@@ -192,6 +190,7 @@ public class CartControllerTest {
                 .build();
         
         mockMvc.perform(put("/api/cart/items/" + cartItemId)
+                        .header("Authorization", "Bearer " + authToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDTO)))
                 .andDo(print())
@@ -213,7 +212,8 @@ public class CartControllerTest {
         Cart cart = cartRepository.findAll().stream().findFirst().orElseThrow();
         String cartId = cart.getId().toString();
         
-        mockMvc.perform(get("/api/cart/" + cartId + "/total"))
+        mockMvc.perform(get("/api/cart/" + cartId + "/total")
+                        .header("Authorization", "Bearer " + authToken))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isNumber());
@@ -229,7 +229,8 @@ public class CartControllerTest {
     public void test6_RemoveItemFromCart() throws Exception {
         System.out.println("\n=== TEST 6: Remover item del carrito (DELETE /api/cart/items/{cartItemId}) ===");
         
-        mockMvc.perform(delete("/api/cart/items/" + cartItemId))
+        mockMvc.perform(delete("/api/cart/items/" + cartItemId)
+                        .header("Authorization", "Bearer " + authToken))
                 .andDo(print())
                 .andExpect(status().isOk());
         
@@ -251,12 +252,14 @@ public class CartControllerTest {
                 .build();
         
         mockMvc.perform(post("/api/cart/user/" + userId + "/items")
+                        .header("Authorization", "Bearer " + authToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(addToCart)))
                 .andExpect(status().isOk());
         
         // Luego limpiar el carrito
-        mockMvc.perform(delete("/api/cart/user/" + userId + "/clear"))
+        mockMvc.perform(delete("/api/cart/user/" + userId + "/clear")
+                        .header("Authorization", "Bearer " + authToken))
                 .andDo(print())
                 .andExpect(status().isOk());
         
@@ -278,6 +281,7 @@ public class CartControllerTest {
                 .build();
         
         mockMvc.perform(post("/api/cart/user/" + userId + "/items")
+                        .header("Authorization", "Bearer " + authToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(addToCart)))
                 .andDo(print())

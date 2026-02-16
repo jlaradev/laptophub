@@ -18,6 +18,8 @@ import com.laptophub.backend.repository.PaymentRepository;
 import com.laptophub.backend.repository.ProductImageRepository;
 import com.laptophub.backend.repository.ProductRepository;
 import com.laptophub.backend.repository.UserRepository;
+import com.laptophub.backend.support.TestAuthHelper;
+import com.laptophub.backend.support.TestAuthHelper.AuthInfo;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.TestMethodOrder;
@@ -26,6 +28,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -71,6 +74,9 @@ public class PaymentControllerTest {
     @Autowired
     private UserRepository userRepository;
 
+        @Autowired
+        private PasswordEncoder passwordEncoder;
+
     @Autowired
     private ProductRepository productRepository;
 
@@ -81,6 +87,8 @@ public class PaymentControllerTest {
     private static String productId;
     private static String orderId;
     private static String paymentId;
+        private static String userToken;
+        private static String adminToken;
     
     private static final String UNIQUE_EMAIL = "payment.test." + System.currentTimeMillis() + "@laptophub.com";
 
@@ -107,18 +115,24 @@ public class PaymentControllerTest {
         
         System.out.println("\n=== TEST 1: Configuración - Crear usuario, producto y orden ===");
         
-        // Crear usuario
-        User testUser = User.builder()
-                .email(UNIQUE_EMAIL)
-                .password("password123")
-                .nombre("Payment")
-                .apellido("Tester")
-                .telefono("555-0004")
-                .direccion("Payment Test Address")
-                .build();
-        
-        User savedUser = userRepository.save(testUser);
-        userId = savedUser.getId().toString();
+        AuthInfo authInfo = TestAuthHelper.registerAndLogin(
+                mockMvc,
+                objectMapper,
+                UNIQUE_EMAIL,
+                "password123",
+                "Payment",
+                "Tester"
+        );
+        userId = authInfo.getUserId();
+        userToken = authInfo.getToken();
+        adminToken = TestAuthHelper.createAdminAndLogin(
+                userRepository,
+                passwordEncoder,
+                mockMvc,
+                objectMapper,
+                TestAuthHelper.uniqueEmail("payment.admin"),
+                "admin123"
+        );
         
         // Crear producto
         Product testProduct = Product.builder()
@@ -153,6 +167,7 @@ public class PaymentControllerTest {
                 .build();
         
         mockMvc.perform(post("/api/cart/user/" + userId + "/items")
+                        .header("Authorization", "Bearer " + userToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(addToCart)))
                 .andExpect(status().isOk());
@@ -163,6 +178,7 @@ public class PaymentControllerTest {
                 .build();
         
         MvcResult result = mockMvc.perform(post("/api/orders/user/" + userId)
+                        .header("Authorization", "Bearer " + userToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(orderDTO)))
                 .andExpect(status().isOk())
@@ -193,7 +209,8 @@ public class PaymentControllerTest {
     public void test2_FindPaymentById() throws Exception {
         System.out.println("\n=== TEST 2: Buscar payment por ID (GET /api/payments/{paymentId}) ===");
         
-        mockMvc.perform(get("/api/payments/" + paymentId))
+        mockMvc.perform(get("/api/payments/" + paymentId)
+                        .header("Authorization", "Bearer " + adminToken))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(paymentId))
@@ -211,7 +228,8 @@ public class PaymentControllerTest {
     public void test3_UpdatePaymentStatus() throws Exception {
         System.out.println("\n=== TEST 3: Actualizar estado del payment (PUT /api/payments/{paymentId}/status/{estado}) ===");
         
-        mockMvc.perform(put("/api/payments/" + paymentId + "/status/COMPLETADO"))
+        mockMvc.perform(put("/api/payments/" + paymentId + "/status/COMPLETADO")
+                        .header("Authorization", "Bearer " + adminToken))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(paymentId))
@@ -231,6 +249,7 @@ public class PaymentControllerTest {
         String stripeId = "pi_1A2B3C4D5E6F7G8H9I0J";
         
         mockMvc.perform(put("/api/payments/" + paymentId + "/stripe-id")
+                        .header("Authorization", "Bearer " + adminToken)
                         .param("value", stripeId))
                 .andDo(print())
                 .andExpect(status().isOk())
@@ -250,7 +269,8 @@ public class PaymentControllerTest {
         
         String stripeId = "pi_1A2B3C4D5E6F7G8H9I0J";
         
-        mockMvc.perform(get("/api/payments/stripe/" + stripeId))
+        mockMvc.perform(get("/api/payments/stripe/" + stripeId)
+                        .header("Authorization", "Bearer " + adminToken))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.stripePaymentId").value(stripeId))
@@ -274,6 +294,7 @@ public class PaymentControllerTest {
                 .build();
         
         mockMvc.perform(post("/api/cart/user/" + userId + "/items")
+                        .header("Authorization", "Bearer " + userToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(addToCart)))
                 .andExpect(status().isOk());
@@ -283,6 +304,7 @@ public class PaymentControllerTest {
                 .build();
         
         MvcResult orderResult = mockMvc.perform(post("/api/orders/user/" + userId)
+                        .header("Authorization", "Bearer " + userToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(orderDTO)))
                 .andExpect(status().isOk())
@@ -299,6 +321,7 @@ public class PaymentControllerTest {
                 .orElseThrow();
         
         mockMvc.perform(post("/api/payments/" + newPayment.getId() + "/simulate")
+                        .header("Authorization", "Bearer " + adminToken)
                         .param("success", "true"))
                 .andDo(print())
                 .andExpect(status().isOk())
@@ -322,6 +345,7 @@ public class PaymentControllerTest {
                 .build();
         
         mockMvc.perform(post("/api/cart/user/" + userId + "/items")
+                        .header("Authorization", "Bearer " + userToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(addToCart)))
                 .andExpect(status().isOk());
@@ -331,6 +355,7 @@ public class PaymentControllerTest {
                 .build();
         
         MvcResult orderResult = mockMvc.perform(post("/api/orders/user/" + userId)
+                        .header("Authorization", "Bearer " + userToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(orderDTO)))
                 .andExpect(status().isOk())
@@ -347,6 +372,7 @@ public class PaymentControllerTest {
                 .orElseThrow();
         
         mockMvc.perform(post("/api/payments/" + newPayment.getId() + "/simulate")
+                        .header("Authorization", "Bearer " + adminToken)
                         .param("success", "false"))
                 .andDo(print())
                 .andExpect(status().isOk())
@@ -370,6 +396,7 @@ public class PaymentControllerTest {
                 .build();
         
         mockMvc.perform(post("/api/cart/user/" + userId + "/items")
+                        .header("Authorization", "Bearer " + userToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(addToCart)))
                 .andExpect(status().isOk());
@@ -379,6 +406,7 @@ public class PaymentControllerTest {
                 .build();
         
         MvcResult result = mockMvc.perform(post("/api/orders/user/" + userId)
+                        .header("Authorization", "Bearer " + userToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(orderDTO)))
                 .andExpect(status().isOk())
@@ -423,6 +451,7 @@ public class PaymentControllerTest {
                 .build();
 
         mockMvc.perform(post("/api/payments/create")
+                        .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andDo(print())

@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.lang.NonNull;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +24,7 @@ import java.util.UUID;
 public class UserService {
     
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
     
     @Transactional
     @SuppressWarnings("null")
@@ -31,6 +33,7 @@ public class UserService {
             throw new ConflictException("El email " + dto.getEmail() + " ya está registrado");
         }
         User user = DTOMapper.toUser(dto);
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
         User saved = userRepository.save(user);
         return DTOMapper.toUserResponse(saved);
     }

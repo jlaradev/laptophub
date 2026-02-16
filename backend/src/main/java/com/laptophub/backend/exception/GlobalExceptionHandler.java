@@ -1,5 +1,6 @@
 package com.laptophub.backend.exception;
 
+import com.stripe.exception.StripeException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -76,6 +77,34 @@ public class GlobalExceptionHandler {
             ValidationException e,
             HttpServletRequest request) {
         return ResponseEntity.status(400)
+            .body(ApiResponse.builder()
+                .success(false)
+                .message(e.getMessage())
+                .data(null)
+                .timestamp(LocalDateTime.now())
+                .path(request.getRequestURI())
+                .build());
+    }
+
+    @ExceptionHandler(StripeException.class)
+    public ResponseEntity<ApiResponse<?>> handleStripeException(
+            StripeException e,
+            HttpServletRequest request) {
+        return ResponseEntity.status(502)
+            .body(ApiResponse.builder()
+                .success(false)
+                .message(e.getMessage())
+                .data(null)
+                .timestamp(LocalDateTime.now())
+                .path(request.getRequestURI())
+                .build());
+    }
+
+    @ExceptionHandler(TooManyRequestsException.class)
+    public ResponseEntity<ApiResponse<?>> handleTooManyRequests(
+            TooManyRequestsException e,
+            HttpServletRequest request) {
+        return ResponseEntity.status(429)
             .body(ApiResponse.builder()
                 .success(false)
                 .message(e.getMessage())

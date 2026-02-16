@@ -1,6 +1,7 @@
 package com.laptophub.backend.controller;
 
 import com.laptophub.backend.dto.ProductImageDTO;
+import com.laptophub.backend.exception.ResourceNotFoundException;
 import com.laptophub.backend.model.Product;
 import com.laptophub.backend.model.ProductImage;
 import com.laptophub.backend.repository.ProductImageRepository;
@@ -43,7 +44,7 @@ public class ProductImageController {
             @RequestParam(required = false) String descripcion) throws IOException {
         
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new RuntimeException("Product not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con id: " + productId));
         
         String imageUrl = cloudinaryService.uploadImage(file, "laptophub/products");
         
@@ -94,7 +95,7 @@ public class ProductImageController {
             @RequestParam(required = false) String descripcion) {
         
         ProductImage image = productImageRepository.findById(imageId)
-                .orElseThrow(() -> new RuntimeException("Image not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Imagen no encontrada con id: " + imageId));
         
         if (url != null) image.setUrl(url);
         if (orden != null) image.setOrden(orden);

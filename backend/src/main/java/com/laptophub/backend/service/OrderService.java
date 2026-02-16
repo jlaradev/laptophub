@@ -51,7 +51,7 @@ public class OrderService {
         for (CartItem cartItem : cart.getItems()) {
             Long productId = cartItem.getProduct().getId();
             Product product = productRepository.findByIdWithLock(productId)
-                .orElseThrow(() -> new RuntimeException("Producto no encontrado con id: " + productId));
+                .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con id: " + productId));
             
             if (product.getStock() < cartItem.getCantidad()) {
                 throw new ValidationException("Stock insuficiente para producto " + product.getId());

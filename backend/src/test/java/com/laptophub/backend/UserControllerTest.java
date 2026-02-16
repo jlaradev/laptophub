@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.laptophub.backend.dto.UserRegisterDTO;
 import com.laptophub.backend.dto.UserResponseDTO;
 import com.laptophub.backend.repository.UserRepository;
+import com.laptophub.backend.support.TestAuthHelper;
+import com.laptophub.backend.support.TestAuthHelper.AuthInfo;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -13,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -39,8 +42,13 @@ public class UserControllerTest {
     @Autowired
     private UserRepository userRepository;
 
+        @Autowired
+        private PasswordEncoder passwordEncoder;
+
     private static String userId; // Para compartir entre tests
     private static final String TEST_EMAIL = "test.user@laptophub.com";
+        private static String userToken;
+        private static String adminToken;
 
     /**
      * Limpia la base de datos una sola vez antes de todos los tests
@@ -62,31 +70,24 @@ public class UserControllerTest {
         
         System.out.println("\n=== TEST 1: Crear nuevo usuario (POST /api/users/register) ===");
         
-        UserRegisterDTO newUser = UserRegisterDTO.builder()
-                .email(TEST_EMAIL)
-                .password("password123")
-                .nombre("Juan")
-                .apellido("Pérez")
-                .telefono("555-1234")
-                .direccion("Calle Falsa 123")
-                .build();
-
-        MvcResult result = mockMvc.perform(post("/api/users/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(newUser)))
-                .andDo(print())
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").exists())
-                .andExpect(jsonPath("$.email").value(TEST_EMAIL))
-                .andExpect(jsonPath("$.nombre").value("Juan"))
-                .andExpect(jsonPath("$.apellido").value("Pérez"))
-                .andExpect(jsonPath("$.password").doesNotExist())
-                .andReturn();
-
-        // Guardar el ID para los siguientes tests
-        String response = result.getResponse().getContentAsString();
-        UserResponseDTO createdUser = objectMapper.readValue(response, UserResponseDTO.class);
-        userId = createdUser.getId().toString();
+        AuthInfo authInfo = TestAuthHelper.registerAndLogin(
+                mockMvc,
+                objectMapper,
+                TEST_EMAIL,
+                "password123",
+                "Juan",
+                "Pérez"
+        );
+        userId = authInfo.getUserId();
+        userToken = authInfo.getToken();
+        adminToken = TestAuthHelper.createAdminAndLogin(
+                userRepository,
+                passwordEncoder,
+                mockMvc,
+                objectMapper,
+                TestAuthHelper.uniqueEmail("user.admin"),
+                "admin123"
+        );
         
         System.out.println("✅ TEST 1 PASÓ: Usuario creado con ID: " + userId + "\n");
     }
@@ -99,7 +100,8 @@ public class UserControllerTest {
     public void test2_FindUserById() throws Exception {
         System.out.println("\n=== TEST 2: Buscar usuario por ID (GET /api/users/{id}) ===");
         
-        mockMvc.perform(get("/api/users/" + userId))
+        mockMvc.perform(get("/api/users/" + userId)
+                        .header("Authorization", "Bearer " + userToken))
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(userId))
@@ -118,6 +120,7 @@ public class UserControllerTest {
         System.out.println("\n=== TEST 3: Listar todos los usuarios (GET /api/users) ===");
         
         mockMvc.perform(get("/api/users")
+                        .header("Authorization", "Bearer " + adminToken)
                         .param("page", "0")
                         .param("size", "10"))
                 .andDo(print())
@@ -139,6 +142,7 @@ public class UserControllerTest {
         System.out.println("\n=== TEST 4: Buscar usuario por email (GET /api/users/email) ===");
         
         mockMvc.perform(get("/api/users/email")
+                        .header("Authorization", "Bearer " + userToken)
                         .param("email", TEST_EMAIL))
                 .andDo(print())
                 .andExpect(status().isOk())
@@ -166,6 +170,7 @@ public class UserControllerTest {
                 .build();
 
         mockMvc.perform(put("/api/users/" + userId)
+                        .header("Authorization", "Bearer " + userToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateData)))
                 .andDo(print())

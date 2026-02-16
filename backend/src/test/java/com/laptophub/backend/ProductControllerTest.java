@@ -10,6 +10,8 @@ import com.laptophub.backend.repository.OrderItemRepository;
 import com.laptophub.backend.repository.ProductRepository;
 import com.laptophub.backend.repository.ProductImageRepository;
 import com.laptophub.backend.repository.ReviewRepository;
+import com.laptophub.backend.repository.UserRepository;
+import com.laptophub.backend.support.TestAuthHelper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -19,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -60,9 +63,16 @@ public class ProductControllerTest {
     @Autowired
     private CartItemRepository cartItemRepository;
 
+        @Autowired
+        private UserRepository userRepository;
+
+        @Autowired
+        private PasswordEncoder passwordEncoder;
+
     private static String productId; // Para compartir entre tests
     private static final String TEST_PRODUCT_NAME = "Laptop Dell XPS 15";
     private static final String TEST_BRAND = "Dell";
+        private static String adminToken;
 
     /**
      * Limpia la base de datos una sola vez antes de todos los tests
@@ -87,6 +97,15 @@ public class ProductControllerTest {
         
         System.out.println("\n=== TEST 1: Crear nuevo producto (POST /api/products) ===");
         
+        adminToken = TestAuthHelper.createAdminAndLogin(
+                userRepository,
+                passwordEncoder,
+                mockMvc,
+                objectMapper,
+                TestAuthHelper.uniqueEmail("product.admin"),
+                "admin123"
+        );
+
         ProductCreateDTO newProduct = ProductCreateDTO.builder()
                 .nombre(TEST_PRODUCT_NAME)
                 .descripcion("Laptop de alto rendimiento para profesionales")
@@ -102,6 +121,7 @@ public class ProductControllerTest {
                 .build();
 
         MvcResult result = mockMvc.perform(post("/api/products")
+                        .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(newProduct)))
                 .andDo(print())
@@ -238,6 +258,7 @@ public class ProductControllerTest {
                 .build();
 
         mockMvc.perform(put("/api/products/" + productId)
+                        .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateData)))
                 .andDo(print())
@@ -259,7 +280,8 @@ public class ProductControllerTest {
     public void test7_DeleteProduct() throws Exception {
         System.out.println("\n=== TEST 7: Eliminar producto (DELETE /api/products/{id}) ===");
         
-        mockMvc.perform(delete("/api/products/" + productId))
+        mockMvc.perform(delete("/api/products/" + productId)
+                        .header("Authorization", "Bearer " + adminToken))
                 .andDo(print())
                 .andExpect(status().isOk());
 
@@ -292,6 +314,7 @@ public class ProductControllerTest {
                 .build();
 
         MvcResult result = mockMvc.perform(post("/api/products")
+                        .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(finalProduct)))
                 .andDo(print())

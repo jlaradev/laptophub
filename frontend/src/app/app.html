@@ -8,11 +8,11 @@
         <a href="#" class="hover:text-blue-600 transition">Soporte</a>
       </nav>
       <div class="flex gap-3">
-        <button class="px-5 py-2 text-sm font-semibold text-slate-700 border border-slate-200 rounded-full hover:bg-slate-50 transition">
+        <a *ngIf="!isLoggedIn()" routerLink="/login" class="px-5 py-2 text-sm font-semibold text-slate-700 border border-slate-200 rounded-full hover:bg-slate-50 transition cursor-pointer">
           Iniciar sesion
-        </button>
-        <button class="px-5 py-2 text-sm font-semibold text-white bg-blue-600 rounded-full shadow-md hover:bg-blue-700 transition">
-          Ver catalogo
+        </a>
+        <button *ngIf="isLoggedIn()" (click)="logout()" class="px-5 py-2 text-sm font-semibold text-white bg-red-600 rounded-full hover:bg-red-700 transition">
+          Cerrar sesion
         </button>
       </div>
     </div>

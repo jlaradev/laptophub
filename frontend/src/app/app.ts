@@ -1,16 +1,19 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { ProductService } from './services/product.service';
+import { AuthService } from './services/auth.service';
 import { Product } from './models/product.model';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink],
   templateUrl: './app.html'
 })
 export class App implements OnInit {
   private productService = inject(ProductService);
+  private authService = inject(AuthService);
 
   // Signals para gestionar estado
   products = signal<Product[]>([]);
@@ -18,9 +21,17 @@ export class App implements OnInit {
   error = signal<string | null>(null);
   currentPage = signal(0);
   totalPages = signal(0);
+  isLoggedIn = signal(false);
 
   ngOnInit() {
+    this.isLoggedIn.set(this.authService.isLoggedInSync());
     this.loadProducts();
+  }
+
+  logout() {
+    this.authService.logout();
+    this.isLoggedIn.set(false);
+    window.location.reload();
   }
 
   loadProducts() {

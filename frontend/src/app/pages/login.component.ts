@@ -1,7 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink, Router } from '@angular/router';
+import { RouterLink, Router, ActivatedRoute } from '@angular/router';
 import { FooterComponent } from '../components/footer.component';
 import { AuthService } from '../services/auth.service';
 
@@ -90,11 +90,24 @@ import { AuthService } from '../services/auth.service';
 export class LoginComponent {
   private authService = inject(AuthService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
 
   email = '';
   password = '';
   loading = signal(false);
   error = signal<string | null>(null);
+
+  constructor() {
+    // Si ya está autenticado, redirigir automáticamente
+    if (this.authService.isLoggedInSync()) {
+      const redirect = this.route.snapshot.queryParamMap.get('redirect');
+      if (redirect) {
+        this.router.navigateByUrl(redirect);
+      } else {
+        this.router.navigate(['/']);
+      }
+    }
+  }
 
   handleLogin() {
     this.error.set(null);
@@ -108,7 +121,13 @@ export class LoginComponent {
 
     this.authService.login({ email: this.email, password: this.password }).subscribe({
       next: () => {
-        this.router.navigate(['/']);
+        // Leer el parámetro de redirección si existe
+        const redirect = this.route.snapshot.queryParamMap.get('redirect');
+        if (redirect) {
+          this.router.navigateByUrl(redirect);
+        } else {
+          this.router.navigate(['/']);
+        }
       },
       error: (err) => {
         this.loading.set(false);
@@ -117,3 +136,4 @@ export class LoginComponent {
     });
   }
 }
+
